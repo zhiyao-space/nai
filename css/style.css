@@ -703,6 +703,40 @@ input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border-radius
 .mask-tools .grow { flex: 1; }
 .mask-tools .ghost-btn { padding: 6px 10px; font-size: 12px; }
 
+/* ---------- Vibe transfer ---------- */
+
+.vibe-upload .upload-empty { padding: 16px 10px; }
+
+.vibe-list { display: flex; flex-direction: column; gap: 10px; }
+
+.vibe-card {
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.vibe-card-head {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.vibe-card-head .icon-btn { margin-left: auto; }
+
+.vibe-thumb {
+  display: block;
+  width: 100%;
+  max-height: 150px;
+  object-fit: contain;
+  background: #000;
+  border-radius: 4px;
+}
 
 /* ---------- Hint system ---------- */
 

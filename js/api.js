@@ -137,15 +137,16 @@ function buildNaiPayload(p) {
   if (isV4) {
     const chars = (p.characters || []).filter((c) => c.prompt && c.prompt.trim());
     const useCoords = !!p.useCoords && chars.length > 0;
+    const vibes = (p.vibes || []).filter((v) => v.b64);
 
     params.negative_prompt = ucp;
     params.use_coords = useCoords;
     params.normalize_reference_strength_multiple = false;
     params.legacy_uc = false;
     params.image_format = "png";
-    params.reference_image_multiple = [];
-    params.reference_information_extracted_multiple = [];
-    params.reference_strength_multiple = [];
+    params.reference_image_multiple = vibes.map((v) => v.b64);
+    params.reference_information_extracted_multiple = vibes.map((v) => Number(v.infoExtracted ?? 1));
+    params.reference_strength_multiple = vibes.map((v) => Number(v.referenceStrength ?? 0.6));
 
     params.characterPrompts = chars.map((c) => ({
       prompt: c.prompt.trim(),
@@ -180,6 +181,12 @@ function buildNaiPayload(p) {
     params.uc = ucp;
     params.sm = false;
     params.sm_dyn = false;
+    const vibes = (p.vibes || []).filter((v) => v.b64);
+    if (vibes.length) {
+      params.reference_image = vibes[0].b64;
+      params.reference_information_extracted = Number(vibes[0].infoExtracted ?? 1);
+      params.reference_strength = Number(vibes[0].referenceStrength ?? 0.6);
+    }
     const merged = (p.characters || [])
       .filter((c) => c.prompt && c.prompt.trim())
       .map((c) => c.prompt.trim());

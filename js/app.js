@@ -65,6 +65,9 @@ let maskStrokes = [];
 let maskMode = "draw";
 let maskDirty = false;
 
+const VIBE_LIMIT = 5;
+let vibes = [];
+
 /* ---------- persistence ---------- */
 
 function loadState() {
@@ -220,6 +223,7 @@ function buildModelSelect() {
     populateSamplers(sel.value);
     updateNegativePlaceholder();
     updateAnlas();
+    updateVibeHints();
     saveParams();
   });
   updateModelSelectView();
@@ -455,9 +459,14 @@ function bindImageUpload() {
     if (f && f.type.startsWith("image/")) loadSourceFile(f);
   });
   document.addEventListener("paste", (e) => {
-    if (currentAction() === "generate") return;
     const item = e.clipboardData && Array.from(e.clipboardData.items).find((i) => i.type.startsWith("image/"));
-    if (item) loadSourceFile(item.getAsFile());
+    if (!item) return;
+    const file = item.getAsFile();
+    if (currentAction() === "generate") {
+      addVibeFiles([file]);
+    } else {
+      loadSourceFile(file);
+    }
   });
   $("removeSourceBtn").addEventListener("click", () => {
     sourceImage = null;
@@ -716,6 +725,141 @@ function renderCharacterList() {
   });
 }
 
+/* ---------- vibe transfer ---------- */
+
+function bindVibeTransfer() {
+  const box = $("vibeUploadBox");
+  const input = $("vibeFileInput");
+  box.addEventListener("click", () => input.click());
+  input.addEventListener("change", () => {
+    if (input.files && input.files.length) addVibeFiles(Array.from(input.files));
+    input.value = "";
+  });
+  box.addEventListener("dragover", (e) => { e.preventDefault(); box.classList.add("dragover"); });
+  box.addEventListener("dragleave", () => box.classList.remove("dragover"));
+  box.addEventListener("drop", (e) => {
+    e.preventDefault();
+    box.classList.remove("dragover");
+    const files = e.dataTransfer && e.dataTransfer.files;
+    if (files && files.length) addVibeFiles(Array.from(files).filter((f) => f.type.startsWith("image/")));
+  });
+  renderVibeList();
+}
+
+function addVibeFiles(files) {
+  const room = VIBE_LIMIT - vibes.length;
+  if (room <= 0) {
+    toast(`氛围图最多 ${VIBE_LIMIT} 张`, "warn");
+    return;
+  }
+  const list = files.filter(Boolean).slice(0, room);
+  if (files.length > room) toast(`氛围图最多 ${VIBE_LIMIT} 张，已截取前 ${room} 张`, "warn");
+  if (!list.length) return;
+  let pending = list.length;
+  const done = () => {
+    pending--;
+    if (pending <= 0) renderVibeList();
+  };
+  for (const file of list) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = String(reader.result);
+      const img = new Image();
+      img.onload = () => {
+        vibes.push({
+          id: crypto.randomUUID(),
+          b64: dataUrl.split(",")[1] || "",
+          dataUrl,
+          infoExtracted: 1,
+          referenceStrength: 0.6
+        });
+        done();
+      };
+      img.onerror = () => { toast("图片读取失败", "error"); done(); };
+      img.src = dataUrl;
+    };
+    reader.onerror = () => { toast("图片读取失败", "error"); done(); };
+    reader.readAsDataURL(file);
+  }
+}
+
+function buildVibeSlider(vibe, key, label) {
+  const wrap = document.createElement("div");
+  wrap.className = "field slider-field";
+  const lab = document.createElement("label");
+  const text = document.createElement("span");
+  text.textContent = label;
+  const out = document.createElement("output");
+  out.textContent = (+vibe[key]).toFixed(2);
+  lab.appendChild(text);
+  lab.appendChild(out);
+  const inp = document.createElement("input");
+  inp.type = "range";
+  inp.min = "0";
+  inp.max = "1";
+  inp.step = "0.01";
+  inp.value = vibe[key];
+  inp.addEventListener("input", () => {
+    vibe[key] = +inp.value;
+    out.textContent = (+inp.value).toFixed(2);
+  });
+  wrap.appendChild(lab);
+  wrap.appendChild(inp);
+  return wrap;
+}
+
+function renderVibeList() {
+  const list = $("vibeList");
+  list.innerHTML = "";
+  vibes.forEach((v, idx) => {
+    const card = document.createElement("div");
+    card.className = "vibe-card";
+
+    const head = document.createElement("div");
+    head.className = "vibe-card-head";
+    const label = document.createElement("span");
+    label.textContent = `氛围 ${idx + 1}`;
+    const del = document.createElement("button");
+    del.className = "icon-btn sm";
+    del.title = "移除氛围图";
+    del.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+    del.addEventListener("click", () => {
+      vibes.splice(idx, 1);
+      renderVibeList();
+    });
+    head.appendChild(label);
+    head.appendChild(del);
+    card.appendChild(head);
+
+    const thumb = document.createElement("img");
+    thumb.className = "vibe-thumb";
+    thumb.src = v.dataUrl;
+    thumb.alt = "氛围参考图";
+    card.appendChild(thumb);
+
+    card.appendChild(buildVibeSlider(v, "infoExtracted", "信息提取 (Information Extracted)"));
+    card.appendChild(buildVibeSlider(v, "referenceStrength", "参考强度 (Reference Strength)"));
+    list.appendChild(card);
+  });
+  updateVibeHints();
+}
+
+function updateVibeHints() {
+  const hint = $("vibeHint");
+  const msgs = [];
+  if (settings.format === "openai" && vibes.length) {
+    msgs.push("当前为 OpenAI 兼容格式，氛围转移将被忽略；请切换为 NovelAI 官方格式");
+  }
+  if (familyOf() === 3 && vibes.length > 1) {
+    msgs.push("V3 模型仅支持 1 张氛围图，生成时只使用第 1 张");
+  }
+  const full = vibes.length >= VIBE_LIMIT;
+  $("vibeUploadBox").classList.toggle("hidden", full);
+  if (full) msgs.push(`已达上限 ${VIBE_LIMIT} 张，移除一张后可继续添加`);
+  hint.textContent = msgs.join(" · ");
+  hint.classList.toggle("hidden", !msgs.length);
+}
+
 /* ---------- anlas ---------- */
 
 function updateAnlas() {
@@ -926,6 +1070,7 @@ function reuseParams(meta) {
     params.useOrder = meta.useOrder;
     $("useOrderToggle").checked = meta.useOrder;
   }
+  updateVibeHints();
   updateAnlas();
   saveParams();
   if (isMobileView()) switchView("creation");
@@ -974,7 +1119,12 @@ function collectParams() {
       y: c.y ?? 0.5
     })),
     useCoords: params.useCoords,
-    useOrder: params.useOrder
+    useOrder: params.useOrder,
+    vibes: vibes.map((v) => ({
+      b64: v.b64,
+      infoExtracted: v.infoExtracted,
+      referenceStrength: v.referenceStrength
+    }))
   };
 }
 
@@ -1038,6 +1188,9 @@ async function generate() {
   if (!p.prompt.trim() && !p.characters.some((c) => c.prompt.trim())) {
     toast("请先输入提示词 (Prompt) 或角色提示词", "warn");
     return;
+  }
+  if (settings.format === "openai" && p.vibes.length) {
+    toast("氛围转移仅支持 NovelAI 官方格式，本次已忽略氛围图", "warn", 5000);
   }
   saveSettings();
   setGenerating(true);
@@ -1147,6 +1300,7 @@ function bindSettingsModal() {
     updateModelSelectView();
     updateNegativePlaceholder();
     updateAnlas();
+    updateVibeHints();
     closeSettings();
     toast(settings.base ? "API 设置已保存" : "已保存，但中转站地址为空", settings.base ? "ok" : "warn");
   });
@@ -1253,6 +1407,7 @@ function init() {
   bindActionSeg();
   bindImageUpload();
   bindMaskEditor();
+  bindVibeTransfer();
   bindSizeControls();
   bindSliders();
   bindCountSeg();
