@@ -49,3 +49,14 @@ Entries discovered by the Agent during task execution should follow this format:
   - 待补: 局部重绘 add_original_image 开关 (官方可选, 目前写死 true)
   - 待补: 官方模型清单补全 (Furry 等系列模型 ID) / 蒙版羽化与图层增强 / 历史分页+批量下载 ZIP / 偏好设置面板
   - 约定: 每个新功能先对照官方请求体结构对齐 (js/api.js buildNaiPayload), NovelAI 原生格式优先, OpenAI 格式对不上的官方特性直接忽略并提示
+
+[部署链路] GitHub Pages 发布流程
+- Date: 2026-11-08
+- Context: 推送 main 后线上站点未更新, 排查发现 Pages 为 legacy 模式, 部署源是 gh-pages 分支
+- Category: Operations & Deployment
+- Instructions:
+  - Pages 配置: legacy 模式, 部署源 = gh-pages 分支根目录, 线上地址 https://zhiyao-space.github.io/nai/
+  - gh-pages 约定: 仅站点文件 (.nojekyll / index.html / css/ / js/), 排除 README.md 与 .monkeycode/
+  - 发布流程: 推 main 之后, 用临时索引构造发布树并快进推送 gh-pages: `GIT_INDEX_FILE=/tmp/x.index git read-tree origin/main && git rm -r --cached .monkeycode README.md && git update-index --add --cacheinfo 100644,$(git hash-object -w --stdin </dev/null),.nojekyll && git write-tree` 然后 `git commit-tree <tree> -p origin/gh-pages` 再 `git push <url> ${COMMIT}:refs/heads/gh-pages`
+  - 推送认证: 平台凭据助手对 github.com 返回 500, 用一次性 URL 带 token 推送; 注意本环境是 zsh, `$COMMIT:refs/...` 会被 `:r` 修饰符吃掉, 必须写 `${COMMIT}:refs/...`
+  - 验证: Pages 构建约 40s, curl 线上 js 资源与页面关键字确认
