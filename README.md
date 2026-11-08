@@ -12,6 +12,7 @@
 - 图生图: 源图上传 (点击 / 拖拽 / Ctrl+V 粘贴), 强度 Strength 与噪声 Noise, 尺寸自动同步源图
 - 角色提示词 (V4): 多角色独立正负提示词 + X/Y 位置坐标, 对应官方 characterPrompts 与 v4_prompt.char_captions 结构
 - 氛围转移 (Vibe Transfer): 最多 5 张参考图, 每张独立信息提取强度与参考强度, V4/V4.5 多图 / V3 单图, 仅 NovelAI 官方格式
+- 画师串源库 (Danbooru): 画师标签搜索 + 代表图预览 + 一键插入提示词 (去重) + 本地收藏, 画师库地址可配置, 连接失败自动回退内置离线合集
 - 图像尺寸预设 (竖图 / 横图 / 方图, 普通与大图), 宽高自定义
 - Steps / Scale / 采样器 (按模型系列动态切换, V4.5 与 V3 采样器名不同) / 噪声调度 / Variety+ (官方 sigma 公式) / CFG 残差 / Seed / 生成数量
 - NovelAI 官方格式响应为 ZIP 内含 PNG, 已内置解压与 PNG 提取
@@ -80,10 +81,20 @@ novelai-clone/
   index.html      页面结构
   css/style.css   NovelAI 风格主题
   js/api.js       中转站 API 兼容层 (两种格式 / 参数构建 / 错误处理)
+  js/artists.js   Danbooru 画师串源库 (搜索 / 预览 / 离线合集)
   js/zip.js       NovelAI ZIP 响应解压与 PNG 提取
   js/db.js        IndexedDB 历史记录
   js/app.js       UI 交互与生成流程
 ```
+
+## 画师串源库
+
+- 数据源: 默认 Danbooru 官方 `tags.json` / `posts.json` 接口, 设置中可自定义画师库地址 (镜像/代理), 自动补全 https 前缀
+- 搜索: 400ms 防抖, 按作品数排序, 支持中文关键词匹配离线合集备注
+- 预览: 按需展开每个画师 3 张代表图, 会话内缓存
+- 插入: 逗号拼接追加到主提示词, 忽略大小写去重; 加权语法 `{画师名}` 手动包裹
+- 收藏: localStorage 持久化, 跨刷新保留
+- 兜底: 请求失败 (含超时 10s) 自动回退内置离线画师合集, 结果行本地过滤
 
 ## 说明
 

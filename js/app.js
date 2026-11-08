@@ -51,7 +51,8 @@ const DEFAULT_SETTINGS = {
   format: "nai",
   path: "",
   model: "nai-diffusion-4-5-curated",
-  customModel: ""
+  customModel: "",
+  artistBase: "https://danbooru.donmai.us"
 };
 
 let settings = { ...DEFAULT_SETTINGS };
@@ -860,6 +861,246 @@ function updateVibeHints() {
   hint.classList.toggle("hidden", !msgs.length);
 }
 
+/* ---------- artist library ---------- */
+
+const LS_ARTIST_FAVS = "nai_clone_artist_favs";
+let artistFavs = [];
+const artistPreviewCache = new Map();
+let artistSearchTimer = null;
+let artistSearchSeq = 0;
+
+function loadArtistFavs() {
+  try {
+    const f = JSON.parse(localStorage.getItem(LS_ARTIST_FAVS) || "[]");
+    artistFavs = Array.isArray(f) ? f.filter((x) => x && x.name) : [];
+  } catch (e) {
+    artistFavs = [];
+  }
+}
+
+function saveArtistFavs() {
+  localStorage.setItem(LS_ARTIST_FAVS, JSON.stringify(artistFavs));
+}
+
+function formatArtistCount(n) {
+  if (n == null) return "≈";
+  if (n >= 10000) return (n / 10000).toFixed(1).replace(/\.0$/, "") + "w";
+  if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, "") + "k";
+  return String(n);
+}
+
+function insertArtistTag(name) {
+  const ta = $("promptInput");
+  const parts = ta.value.split(",").map((s) => s.trim()).filter(Boolean);
+  if (parts.some((p) => p.toLowerCase() === name.toLowerCase())) {
+    toast("该画师已在提示词中", "warn");
+    return false;
+  }
+  parts.push(name);
+  ta.value = parts.join(", ");
+  params.prompt = ta.value;
+  updatePromptCount();
+  saveParams();
+  toast("已插入画师串: " + name, "ok");
+  return true;
+}
+
+function bindArtistLibrary() {
+  loadArtistFavs();
+  renderArtistFavs();
+
+  const input = $("artistSearch");
+  input.addEventListener("input", () => {
+    const q = input.value.trim();
+    clearTimeout(artistSearchTimer);
+    artistSearchTimer = setTimeout(() => runArtistSearch(q), 400);
+  });
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      clearTimeout(artistSearchTimer);
+      runArtistSearch(input.value.trim());
+    }
+  });
+  $("clearArtistFavsBtn").addEventListener("click", () => {
+    if (!artistFavs.length) return;
+    artistFavs = [];
+    saveArtistFavs();
+    renderArtistFavs();
+    toast("已清空收藏", "ok");
+  });
+}
+
+function runArtistSearch(q) {
+  const results = $("artistResults");
+  const hint = $("artistHint");
+  const seq = ++artistSearchSeq;
+  if (!q) {
+    results.innerHTML = "";
+    hint.classList.add("hidden");
+    return;
+  }
+  results.innerHTML = '<div class="artist-empty">搜索中…</div>';
+  hint.classList.add("hidden");
+  fetchArtistTags(settings.artistBase, q)
+    .catch(() => {
+      hint.textContent = "画师库连接失败，已切换到内置离线合集 (可在设置里换画师库地址)";
+      hint.classList.remove("hidden");
+      return filterOfflineArtists(q);
+    })
+    .then((list) => {
+      if (seq !== artistSearchSeq) return;
+      if (!list.length) {
+        results.innerHTML = '<div class="artist-empty">没有找到画师，换个关键词试试</div>';
+        return;
+      }
+      results.innerHTML = "";
+      for (const a of list) {
+        results.appendChild(buildArtistRow(a));
+      }
+    });
+}
+
+function buildArtistRow(a) {
+  const row = document.createElement("div");
+  row.className = "artist-row";
+
+  const line = document.createElement("div");
+  line.className = "artist-row-line";
+
+  const name = document.createElement("button");
+  name.className = "artist-name";
+  name.textContent = a.name;
+  name.title = "插入到主提示词";
+  name.addEventListener("click", () => insertArtistTag(a.name));
+  line.appendChild(name);
+
+  if (a.note) {
+    const note = document.createElement("span");
+    note.className = "artist-note";
+    note.textContent = a.note;
+    line.appendChild(note);
+  }
+
+  const count = document.createElement("span");
+  count.className = "artist-count";
+  count.textContent = formatArtistCount(a.post_count);
+  count.title = a.post_count == null ? "离线合集 (无作品计数)" : "Danbooru 作品数 " + a.post_count;
+  line.appendChild(count);
+
+  const previewBtn = document.createElement("button");
+  previewBtn.className = "icon-btn sm";
+  previewBtn.title = "预览代表图";
+  previewBtn.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+  previewBtn.addEventListener("click", () => toggleArtistPreview(a.name));
+  line.appendChild(previewBtn);
+
+  const favBtn = document.createElement("button");
+  favBtn.className = "icon-btn sm" + (isArtistFav(a.name) ? " fav-on" : "");
+  favBtn.title = isArtistFav(a.name) ? "取消收藏" : "收藏画师";
+  favBtn.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
+  favBtn.addEventListener("click", () => toggleArtistFav(a.name, a.post_count, favBtn));
+  line.appendChild(favBtn);
+
+  const thumbs = document.createElement("div");
+  thumbs.className = "artist-thumbs hidden";
+  thumbs.dataset.tag = a.name;
+
+  row.appendChild(line);
+  row.appendChild(thumbs);
+  return row;
+}
+
+function toggleArtistPreview(tag) {
+  const thumbs = $("artistResults").querySelector('.artist-thumbs[data-tag="' + CSS.escape(tag) + '"]');
+  if (!thumbs) return;
+  if (!thumbs.classList.contains("hidden")) {
+    thumbs.classList.add("hidden");
+    return;
+  }
+  if (artistPreviewCache.has(tag)) {
+    renderArtistThumbs(thumbs, artistPreviewCache.get(tag));
+    thumbs.classList.remove("hidden");
+    return;
+  }
+  thumbs.innerHTML = '<div class="artist-thumb-loading">加载代表图…</div>';
+  thumbs.classList.remove("hidden");
+  fetchArtistPreview(settings.artistBase, tag)
+    .then((urls) => {
+      artistPreviewCache.set(tag, urls);
+      renderArtistThumbs(thumbs, urls);
+    })
+    .catch(() => {
+      thumbs.innerHTML = '<div class="artist-thumb-loading">代表图加载失败</div>';
+    });
+}
+
+function renderArtistThumbs(el, urls) {
+  el.innerHTML = "";
+  if (!urls.length) {
+    el.innerHTML = '<div class="artist-thumb-loading">没有可用代表图</div>';
+    return;
+  }
+  for (const url of urls) {
+    const img = document.createElement("img");
+    img.className = "artist-thumb";
+    img.src = url;
+    img.loading = "lazy";
+    img.alt = "代表图";
+    img.addEventListener("error", () => img.remove());
+    el.appendChild(img);
+  }
+}
+
+function isArtistFav(name) {
+  return artistFavs.some((f) => f.name === name);
+}
+
+function toggleArtistFav(name, postCount, btn) {
+  if (isArtistFav(name)) {
+    artistFavs = artistFavs.filter((f) => f.name !== name);
+    toast("已取消收藏: " + name);
+  } else {
+    artistFavs.unshift({ name, postCount: postCount == null ? null : postCount });
+    toast("已收藏画师: " + name, "ok");
+  }
+  saveArtistFavs();
+  renderArtistFavs();
+  if (btn) {
+    const on = isArtistFav(name);
+    btn.classList.toggle("fav-on", on);
+    btn.title = on ? "取消收藏" : "收藏画师";
+  }
+}
+
+function renderArtistFavs() {
+  const wrap = $("artistFavs");
+  const block = $("artistFavBlock");
+  block.classList.toggle("hidden", !artistFavs.length);
+  wrap.innerHTML = "";
+  for (const f of artistFavs) {
+    const chip = document.createElement("div");
+    chip.className = "artist-fav-chip";
+    const b = document.createElement("button");
+    b.className = "artist-fav-name";
+    b.textContent = f.name;
+    b.title = "插入到主提示词";
+    b.addEventListener("click", () => insertArtistTag(f.name));
+    const del = document.createElement("button");
+    del.className = "icon-btn sm";
+    del.title = "移除收藏";
+    del.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+    del.addEventListener("click", () => {
+      artistFavs = artistFavs.filter((x) => x.name !== f.name);
+      saveArtistFavs();
+      renderArtistFavs();
+    });
+    chip.appendChild(b);
+    chip.appendChild(del);
+    wrap.appendChild(chip);
+  }
+}
+
 /* ---------- anlas ---------- */
 
 function updateAnlas() {
@@ -1241,6 +1482,7 @@ function openSettings() {
   $("apiFormat").value = settings.format;
   $("apiPath").value = settings.path;
   $("apiModelCustom").value = settings.customModel;
+  $("artistBase").value = settings.artistBase || "";
   fillApiModelSelect();
   $("settingsModal").classList.remove("hidden");
 }
@@ -1294,6 +1536,7 @@ function bindSettingsModal() {
     settings.path = $("apiPath").value.trim();
     settings.customModel = $("apiModelCustom").value.trim();
     settings.model = $("apiModelSelect").value || settings.model;
+    settings.artistBase = $("artistBase").value.trim() || "https://danbooru.donmai.us";
     params.model = settings.model;
     saveSettings();
     saveParams();
@@ -1408,6 +1651,7 @@ function init() {
   bindImageUpload();
   bindMaskEditor();
   bindVibeTransfer();
+  bindArtistLibrary();
   bindSizeControls();
   bindSliders();
   bindCountSeg();

@@ -48,6 +48,23 @@
 
       <section class="card collapsible open" data-collapsible>
         <div class="card-title clickable" data-collapse-toggle>
+          <span>画师串源库 (Danbooru) <button class="hint-btn" title="这是什么？">?</button></span>
+          <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <p class="hint-text hidden">搜画师名字，点一下就把画师串进主提示词。画师名用 Danbooru 原文（罗马音 + 下划线）。混 2~3 个效果最稳，想突出谁就用大括号包住：{画师名}。连不上画师库时可去「设置」换画师库地址，搜索失败会自动回退到内置离线合集。</p>
+        <div class="collapsible-body">
+          <input type="text" id="artistSearch" placeholder="搜画师名，如 as109 / miv4t / 清新" autocomplete="off">
+          <p class="field-hint hidden" id="artistHint"></p>
+          <div id="artistResults" class="artist-results"></div>
+          <div id="artistFavBlock" class="hidden">
+            <div class="artist-fav-head">我的收藏 <button class="mini-btn" id="clearArtistFavsBtn">清空</button></div>
+            <div id="artistFavs" class="artist-favs"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card collapsible open" data-collapsible>
+        <div class="card-title clickable" data-collapse-toggle>
           <span>氛围转移 (Vibe Transfer) <button class="hint-btn" title="这是什么？">?</button></span>
           <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
@@ -347,6 +364,11 @@
         <select id="apiModelSelect"></select>
         <input type="text" id="apiModelCustom" placeholder="自定义模型名，填写后优先使用" autocomplete="off" style="margin-top:8px">
       </div>
+      <div class="field">
+        <label>画师库地址 <button class="hint-btn" title="这是什么？">?</button></label>
+        <p class="hint-text hidden">画师串搜索用的标签库地址，默认 Danbooru 官方。连不上时可填镜像或代理地址，搜索失败会自动回退到内置离线合集。</p>
+        <input type="text" id="artistBase" placeholder="https://danbooru.donmai.us" autocomplete="off">
+      </div>
       <button class="ghost-btn" id="fetchModelsBtn">拉取模型列表 (仅 OpenAI 格式)</button>
     </div>
     <div class="modal-foot">
@@ -361,6 +383,7 @@
 <script src="js/zip.js"></script>
 <script src="js/db.js"></script>
 <script src="js/api.js"></script>
+<script src="js/artists.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
