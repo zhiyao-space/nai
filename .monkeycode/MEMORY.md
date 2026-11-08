@@ -36,7 +36,7 @@ Entries discovered by the Agent during task execution should follow this format:
 - Context: Agent 对照 NovelAI 官方图像生成面板盘点本项目 (高仿 NovelAI 的中转站纯前端) 时整理，用户要求记住作为后续开发路线
 - Category: Workflow & Collaboration
 - Instructions:
-  - 已实现: 文生图 / 图生图 / 局部重绘(蒙版画布) / 提示词+负向+画质词+UC 预设 / 画风卡片(简版) / V4.5-V4-V3 模型 / 角色提示词 / 氛围转移(Vibe Transfer) / Variety+ / CFG 残差 / 噪声调度 / 尺寸预设 / IndexedDB 历史+复用参数 / NovelAI+OpenAI 双格式 / ZIP 解压 / Anlas 估算 / 手机优先分页
+  - 已实现: 文生图 / 图生图 / 局部重绘(蒙版画布) / 提示词+负向+画质词+UC 预设 / 画风卡片(简版) / V4.5-V4-V3 模型 / 角色提示词 / 氛围转移(Vibe Transfer) / Danbooru 画师串源库(搜索+缩略图预览+插入去重+收藏, 画师库地址可配置, 断网回退内置离线合集 js/artists.js) / Variety+ / CFG 残差 / 噪声调度 / 尺寸预设 / IndexedDB 历史+复用参数 / NovelAI+OpenAI 双格式 / ZIP 解压 / Anlas 估算 / 手机优先分页
   - 待补 (优先级高): 角色参考 (Character Reference, V4.5): 每个角色挂参考图+信息提取/参考强度, 与氛围转移同构, 对应官方 characterPrompts 内 reference 字段
   - 待补: Augment 图像增强标签页: 官方第四标签 (变体 Demux / 上色 Colorize / 表情 Emotion / 去杂物 Declutter / 抠图 Remove BG), 走官方 augment 接口
   - 待补: 提示词变体 (Variations): {a|b} 变体语法 + variation seed, 字段实现时以官方抓包为准
