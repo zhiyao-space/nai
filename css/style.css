@@ -74,20 +74,6 @@ body {
 
 .top-actions { display: flex; align-items: center; gap: 10px; }
 
-.anlas-chip {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--bg-elev);
-  border: 1px solid var(--border-strong);
-  border-radius: 999px;
-  padding: 4px 12px;
-  font-size: 12px;
-  color: var(--text-dim);
-}
-
-.anlas-chip b { color: var(--accent); font-weight: 700; }
-
 /* ---------- Buttons ---------- */
 
 .icon-btn {
