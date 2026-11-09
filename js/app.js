@@ -69,6 +69,8 @@ let maskDirty = false;
 const VIBE_LIMIT = 5;
 let vibes = [];
 
+let relayModels = [];
+
 /* ---------- persistence ---------- */
 
 function loadState() {
@@ -192,27 +194,70 @@ function updateNegativePlaceholder() {
   }
 }
 
-function buildModelSelect() {
-  const sel = $("modelSelect");
-  sel.innerHTML = "";
-  const groups = [
-    { label: "NovelAI V4.5 系列", ids: ["nai-diffusion-4-5-curated", "nai-diffusion-4-5-full"] },
-    { label: "NovelAI V4 系列", ids: ["nai-diffusion-4-full", "nai-diffusion-4-curated-preview"] },
-    { label: "NovelAI V3 系列", ids: ["nai-diffusion-3", "nai-diffusion-3-inpainting"] }
-  ];
-  for (const g of groups) {
+function relayModelLabel(id) {
+  const m = NAI_MODELS.find((x) => x.id === id);
+  return m ? m.name : id;
+}
+
+function appendModelOptions(sel, ids) {
+  for (const id of ids) {
+    const opt = document.createElement("option");
+    opt.value = id;
+    opt.textContent = relayModelLabel(id);
+    sel.appendChild(opt);
+  }
+}
+
+function fillModelGroups(sel) {
+  if (!relayModels.length) {
     const og = document.createElement("optgroup");
-    og.label = g.label;
-    for (const id of g.ids) {
-      const m = NAI_MODELS.find((x) => x.id === id);
-      const opt = document.createElement("option");
-      opt.value = id;
-      opt.textContent = m ? m.name : id;
-      og.appendChild(opt);
-    }
+    og.label = "中转站模型";
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = "保存设置后自动拉取模型列表";
+    og.appendChild(opt);
+    sel.appendChild(og);
+    return;
+  }
+  const img = relayModels.filter(looksLikeImageModel);
+  if (img.length && img.length < relayModels.length) {
+    const og = document.createElement("optgroup");
+    og.label = "图像模型";
+    appendModelOptions(og, img);
+    sel.appendChild(og);
+    const og2 = document.createElement("optgroup");
+    og2.label = "全部模型";
+    appendModelOptions(og2, relayModels);
+    sel.appendChild(og2);
+  } else {
+    const og = document.createElement("optgroup");
+    og.label = "中转站模型";
+    appendModelOptions(og, relayModels);
     sel.appendChild(og);
   }
-  sel.addEventListener("change", () => {
+}
+
+async function refreshRelayModels(opts = {}) {
+  const cfg = opts.cfg || { base: settings.base, key: settings.key };
+  if (!(cfg.base || "").trim()) {
+    if (opts.manual) toast("请先填写中转站地址", "warn");
+    return;
+  }
+  try {
+    const ids = await fetchModelList(cfg);
+    relayModels = ids;
+    buildModelSelect();
+    if (!$("settingsModal").classList.contains("hidden")) fillApiModelSelect();
+    if (!opts.silent) toast(`已拉取 ${ids.length} 个中转站模型`, "ok");
+  } catch (e) {
+    if (!opts.silent) toast("拉取模型列表失败: " + (e.message || e), "error", 5000);
+  }
+}
+
+function bindModelSelectChange() {
+  $("modelSelect").addEventListener("change", () => {
+    const sel = $("modelSelect");
+    if (!sel.value || !relayModels.includes(sel.value)) return;
     params.model = sel.value;
     settings.model = sel.value;
     if (settings.customModel) {
@@ -223,10 +268,21 @@ function buildModelSelect() {
     }
     populateSamplers(sel.value);
     updateNegativePlaceholder();
-    updateAnlas();
     updateVibeHints();
     saveParams();
   });
+}
+
+function buildModelSelect() {
+  const sel = $("modelSelect");
+  sel.innerHTML = "";
+  fillModelGroups(sel);
+  if (!relayModels.length) {
+    const opt = document.createElement("option");
+    opt.value = effectiveModel() || "nai-diffusion-4-5-curated";
+    opt.textContent = `当前模型: ${effectiveModel() || "nai-diffusion-4-5-curated"}`;
+    sel.appendChild(opt);
+  }
   updateModelSelectView();
 }
 
@@ -262,7 +318,7 @@ function updateModelSelectView() {
   } else {
     if (customOpt) customOpt.remove();
     sel.value = params.model;
-    if (!sel.value) sel.value = NAI_MODELS[0].id;
+    if (!sel.value) sel.value = effectiveModel() || "nai-diffusion-4-5-curated";
   }
   updateCustomModelHint();
 }
@@ -302,8 +358,8 @@ function bindSizeControls() {
     saveParams();
   });
 
-  $("widthInput").addEventListener("input", () => { params.width = clampDim($("widthInput").value); updateDimShow(); updateAnlas(); saveParams(); });
-  $("heightInput").addEventListener("input", () => { params.height = clampDim($("heightInput").value); updateDimShow(); updateAnlas(); saveParams(); });
+  $("widthInput").addEventListener("input", () => { params.width = clampDim($("widthInput").value); updateDimShow(); saveParams(); });
+  $("heightInput").addEventListener("input", () => { params.height = clampDim($("heightInput").value); updateDimShow(); saveParams(); });
   $("swapSizeBtn").addEventListener("click", () => {
     const w = $("widthInput").value;
     $("widthInput").value = $("heightInput").value;
@@ -311,7 +367,6 @@ function bindSizeControls() {
     params.width = +$("widthInput").value;
     params.height = +$("heightInput").value;
     updateDimShow();
-    updateAnlas();
     saveParams();
   });
   updateDimShow();
@@ -330,7 +385,6 @@ function applySizePreset() {
   $("widthInput").value = dims[0];
   $("heightInput").value = dims[1];
   updateDimShow();
-  updateAnlas();
 }
 
 function updateDimShow() {
@@ -346,7 +400,6 @@ function bindSliders() {
       const v = transform ? transform(inp.value) : +inp.value;
       params[key] = v;
       $(outId).textContent = v;
-      updateAnlas();
       saveParams();
     });
   };
@@ -378,7 +431,7 @@ function bindCountSeg() {
       for (const b of seg.querySelectorAll("button")) {
         b.classList.toggle("active", b === btn);
       }
-      updateAnlas();
+      updateVibeHints();
       saveParams();
     });
   }
@@ -519,7 +572,6 @@ function loadSourceFile(file) {
       $("widthInput").value = params.width;
       $("heightInput").value = params.height;
       updateDimShow();
-      updateAnlas();
       saveParams();
       initMaskCanvas();
       toast(`源图已加载 ${img.naturalWidth}x${img.naturalHeight}，尺寸已同步`, "ok");
@@ -1101,19 +1153,6 @@ function renderArtistFavs() {
   }
 }
 
-/* ---------- anlas ---------- */
-
-function updateAnlas() {
-  const model = effectiveModel();
-  const p = {
-    width: params.width || +$("widthInput").value,
-    height: params.height || +$("heightInput").value,
-    steps: params.steps,
-    n: params.n
-  };
-  $("anlasVal").textContent = String(estimateAnlas(p, model));
-}
-
 /* ---------- canvas ---------- */
 
 function showImage(rec) {
@@ -1261,7 +1300,7 @@ function reuseParams(meta) {
   if (meta.qualityOn != null) { params.qualityOn = meta.qualityOn; $("qualityToggle").checked = meta.qualityOn; }
   if (meta.ucpOn != null) { params.ucpOn = meta.ucpOn; $("ucpToggle").checked = meta.ucpOn; }
   if (meta.model) {
-    const known = NAI_MODELS.find((m) => m.id === meta.model);
+    const known = relayModels.includes(meta.model) || NAI_MODELS.some((m) => m.id === meta.model);
     if (known) {
       params.model = meta.model;
       settings.model = meta.model;
@@ -1312,7 +1351,6 @@ function reuseParams(meta) {
     $("useOrderToggle").checked = meta.useOrder;
   }
   updateVibeHints();
-  updateAnlas();
   saveParams();
   if (isMobileView()) switchView("creation");
   toast(meta.action && meta.action !== "generate" ? "已复用该图的生成参数 (源图未保留，请重新上传)" : "已复用该图的生成参数", "ok");
@@ -1494,24 +1532,17 @@ function closeSettings() {
 function fillApiModelSelect() {
   const sel = $("apiModelSelect");
   sel.innerHTML = "";
-  const ogNai = document.createElement("optgroup");
-  ogNai.label = "NovelAI 模型";
-  for (const m of NAI_MODELS) {
+  if (relayModels.length) {
+    fillModelGroups(sel);
+  } else {
+    const og = document.createElement("optgroup");
+    og.label = "中转站模型";
     const opt = document.createElement("option");
-    opt.value = m.id;
-    opt.textContent = m.name;
-    ogNai.appendChild(opt);
+    opt.value = "";
+    opt.textContent = "保存设置后自动拉取模型列表";
+    og.appendChild(opt);
+    sel.appendChild(og);
   }
-  sel.appendChild(ogNai);
-  const ogOai = document.createElement("optgroup");
-  ogOai.label = "OpenAI 兼容模型";
-  for (const m of OPENAI_MODELS) {
-    const opt = document.createElement("option");
-    opt.value = m.id;
-    opt.textContent = m.name;
-    ogOai.appendChild(opt);
-  }
-  sel.appendChild(ogOai);
   const current = settings.model;
   if (current && !sel.querySelector(`option[value="${CSS.escape(current)}"]`)) {
     const opt = document.createElement("option");
@@ -1542,46 +1573,21 @@ function bindSettingsModal() {
     saveParams();
     updateModelSelectView();
     updateNegativePlaceholder();
-    updateAnlas();
     updateVibeHints();
     closeSettings();
     toast(settings.base ? "API 设置已保存" : "已保存，但中转站地址为空", settings.base ? "ok" : "warn");
+    refreshRelayModels();
   });
   $("fetchModelsBtn").addEventListener("click", async () => {
     const btn = $("fetchModelsBtn");
     btn.disabled = true;
     btn.textContent = "获取中…";
-    try {
-      const ids = await fetchModelList({
-        base: $("apiBase").value.trim(),
-        key: $("apiKey").value.trim()
-      });
-      const sel = $("apiModelSelect");
-      sel.innerHTML = "";
-      const og = document.createElement("optgroup");
-      og.label = "中转站可用模型";
-      for (const id of ids) {
-        const opt = document.createElement("option");
-        opt.value = id;
-        opt.textContent = id;
-        og.appendChild(opt);
-      }
-      sel.appendChild(og);
-      const current = settings.model;
-      if (current && !ids.includes(current)) {
-        const opt = document.createElement("option");
-        opt.value = current;
-        opt.textContent = `当前: ${current}`;
-        sel.insertBefore(opt, sel.firstChild);
-      }
-      sel.value = current;
-      toast(`获取成功，共 ${ids.length} 个模型`, "ok");
-    } catch (e) {
-      toast("获取模型列表失败: " + (e.message || e), "error", 5000);
-    } finally {
-      btn.disabled = false;
-      btn.textContent = "拉取模型列表 (仅 OpenAI 格式)";
-    }
+    await refreshRelayModels({
+      manual: true,
+      cfg: { base: $("apiBase").value.trim(), key: $("apiKey").value.trim() }
+    });
+    btn.disabled = false;
+    btn.textContent = "重新拉取模型列表";
   });
 }
 
@@ -1661,7 +1667,8 @@ function init() {
   bindClearHistory();
   bindSettingsModal();
   bindHints();
-  updateAnlas();
+  bindModelSelectChange();
+  refreshRelayModels({ silent: true });
   loadHistory();
   if (!settings.base) {
     setTimeout(() => {

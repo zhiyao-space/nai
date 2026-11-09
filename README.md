@@ -7,7 +7,7 @@
 - NovelAI 风格界面: 左侧参数面板 / 中央画布 / 右侧生成历史
 - 提示词 + 负向提示词, 质量标签与 UCP 负向预设 (按模型系列自动切换)
 - 画风预设卡片, 一键附加风格标签
-- 模型选择 (V4.5 / V4 / V3 系列), 支持中转站自定义模型名
+- 模型列表自动从中转站 `{Base URL}/v1/models` 动态拉取, 图像模型智能分组置顶, 支持自定义模型名
 - 生成模式: 文生图 (generate) / 图生图 (img2img) / 局部重绘 (inpaint, 内置蒙版画布)
 - 图生图: 源图上传 (点击 / 拖拽 / Ctrl+V 粘贴), 强度 Strength 与噪声 Noise, 尺寸自动同步源图
 - 角色提示词 (V4): 多角色独立正负提示词 + X/Y 位置坐标, 对应官方 characterPrompts 与 v4_prompt.char_captions 结构
@@ -19,7 +19,7 @@
 - 生成历史使用 IndexedDB 持久化, 支持复用参数、下载、删除、清空
 - 手机优先分页布局: 底部标签页切换 创作 / 画布 / 历史, 桌面端自动恢复三栏布局
 - 全功能简易名称 + 可点开的「?」大白话注释 (26 处), 专业术语保留在括号中
-- Ctrl + Enter 快捷生成, Anlas 消耗参考估算
+- Ctrl + Enter 快捷生成
 
 ## 与 NovelAI 官方 API 的结构对齐
 
@@ -43,7 +43,7 @@ NovelAI 格式的请求体与官方前端逻辑一致, 便于直连或中转:
 | API Key | 中转站密钥, 以 `Authorization: Bearer` 头发送 |
 | 接口格式 | 见下方两种格式说明 |
 | 请求路径 | 可选, 覆盖默认路径, 适配特殊中转站 |
-| 模型 | 从列表选择, 或在「自定义模型名」填写中转站支持的模型 ID |
+| 模型 | 保存设置后自动从中转站拉取; 列表里没有的模型在「自定义模型名」填写模型 ID, 填写后优先生效 |
 
 ### NovelAI 官方格式
 
@@ -61,7 +61,7 @@ NovelAI 格式的请求体与官方前端逻辑一致, 便于直连或中转:
 - 请求体: `model / prompt / negative_prompt / size / steps / guidance_scale / seed / response_format`
 - 图生图/重绘模式下追加 `image / strength / noise / mask` 扩展字段, 角色提示词以 `|` 合并进 prompt (中转站转发 NovelAI 后端时兼容)
 - 响应: 标准 JSON, 兼容 `b64_json` 与 `url` 两种返回
-- 可点击「获取模型列表」拉取 `{Base URL}/v1/models` 填充模型下拉框
+- 模型下拉保存设置后自动拉取, 也可点「重新拉取模型列表」手动刷新, 数据来自 `{Base URL}/v1/models`
 
 ## 本地运行
 
@@ -98,6 +98,5 @@ novelai-clone/
 
 ## 说明
 
-- Anlas 消耗为参考估算, 实际以中转站计费为准
 - API Key 与配置仅存储于浏览器 localStorage, 页面不经过任何第三方服务器
 - OpenAI 格式请求附带的 `negative_prompt / steps / guidance_scale / seed` 为中转站扩展参数, 官方 OpenAI 接口会忽略或报错, 建议搭配 NovelAI 系模型的中转使用

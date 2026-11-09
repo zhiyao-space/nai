@@ -7,11 +7,6 @@ const NAI_MODELS = [
   { id: "nai-diffusion-3-inpainting", name: "NAI Diffusion V3 Inpainting", family: 3 }
 ];
 
-const OPENAI_MODELS = [
-  { id: "dall-e-3", name: "DALL-E 3 (OpenAI 兼容)", family: 0 },
-  { id: "dall-e-2", name: "DALL-E 2 (OpenAI 兼容)", family: 0 }
-];
-
 const QUALITY_TAGS = {
   3: "masterpiece, best quality, amazing quality",
   4: "very aesthetic, location, masterpiece, no text",
@@ -66,6 +61,12 @@ function modelFamily(modelId) {
   if (/-4(-|\b)|v4/.test(modelId)) return 4;
   if (/-3(-|\b)|v3/.test(modelId)) return 3;
   return 0;
+}
+
+const IMAGE_MODEL_PATTERN = /(nai|diffusion|dall-?e|flux|stable|sd[0-9]|sdxl|seedream|kolors|cogview|gpt-image|image)/i;
+
+function looksLikeImageModel(modelId) {
+  return IMAGE_MODEL_PATTERN.test(String(modelId || ""));
 }
 
 function isV45(modelId) {
@@ -345,13 +346,4 @@ async function fetchModelList(cfg) {
   const json = await res.json();
   const ids = (json.data || []).map((m) => m.id).filter(Boolean).sort();
   return ids;
-}
-
-function estimateAnlas(p, model) {
-  const family = modelFamily(model);
-  const pixels = p.width * p.height;
-  const freeSize = pixels <= 832 * 1216 + 4096;
-  if (p.steps <= 28 && freeSize && family !== 0) return 0;
-  const megapixels = pixels / (1024 * 1024);
-  return Math.max(2, Math.ceil(megapixels * (p.steps / 28) * 20 * p.n));
 }
