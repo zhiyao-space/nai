@@ -1,3 +1,38 @@
+async function requestVisionAnalysis(cfg, model, b64) {
+  let b = (cfg.base || "").trim();
+  if (!b) throw new Error("请先在设置中填写中转站地址");
+  if (!/^https?:\/\//i.test(b)) b = "https://" + b;
+  b = b.replace(/\/+$/, "");
+  const prompt =
+    "You are an art-style analyzer for anime/illustration prompts. Look ONLY at the art style (ignore subject, pose, content). " +
+    'Return ONLY minified JSON, no markdown fences: {"tags":["..."],"summary":"one short sentence"} ' +
+    "where tags are up to 22 lowercase danbooru-style style tags usable as NovelAI prompt tags, covering: medium, lineart character, coloring method, shading, lighting, color palette, texture, atmosphere/mood, composition habits. " +
+    "No artist names, no subject nouns, no people tags.";
+  const res = await fetch(b + "/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: "Bearer " + (cfg.key || "") },
+    body: JSON.stringify({
+      model,
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: prompt },
+            { type: "image_url", image_url: { url: "data:image/png;base64," + b64 } }
+          ]
+        }
+      ],
+      max_tokens: 900
+    })
+  });
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    throw new Error(`HTTP ${res.status} ${t.slice(0, 140)}`);
+  }
+  const j = await res.json();
+  return (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || "";
+}
+
 const NAI_MODELS = [
   { id: "nai-diffusion-4-5-curated", name: "NAI Diffusion V4.5 Curated", family: 4 },
   { id: "nai-diffusion-4-5-full", name: "NAI Diffusion V4.5 Full", family: 4 },

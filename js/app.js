@@ -54,7 +54,8 @@ const DEFAULT_SETTINGS = {
   path: "",
   model: "nai-diffusion-4-5-curated",
   customModel: "",
-  artistBase: "https://danbooru.donmai.us"
+  artistBase: "https://danbooru.donmai.us",
+  visionModel: ""
 };
 
 let settings = { ...DEFAULT_SETTINGS };
@@ -1685,6 +1686,7 @@ function openSettings() {
   $("apiPath").value = settings.path;
   $("apiModelCustom").value = settings.customModel;
   $("artistBase").value = settings.artistBase || "";
+  $("visionModel").value = settings.visionModel || "";
   fillApiModelSelect();
   $("settingsModal").classList.remove("hidden");
 }
@@ -1763,6 +1765,7 @@ function bindSettingsModal() {
     settings.customModel = $("apiModelCustom").value.trim();
     settings.model = $("apiModelSelect").value || settings.model;
     settings.artistBase = $("artistBase").value.trim() || "https://danbooru.donmai.us";
+    settings.visionModel = $("visionModel").value.trim();
     params.model = settings.model;
     saveSettings();
     saveParams();
@@ -2163,6 +2166,182 @@ function bindStylePresets() {
   renderStylePresets();
 }
 
+/* ---------- style extraction (画风提取 - 氛围转移替代方案) ---------- */
+
+let lastStyleExtract = null;
+const STYLE_HUE_NAMES = ["red", "orange", "yellow", "lime", "green", "teal", "cyan", "azure", "blue", "purple", "magenta", "pink"];
+
+function blobToB64(blob) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result).split(",")[1] || "");
+    r.onerror = () => reject(new Error("读取图片失败"));
+    r.readAsDataURL(blob);
+  });
+}
+function loadImageEl(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("图片解码失败"));
+    img.src = url;
+  });
+}
+function rgbToHsl(r, g, b) {
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 510;
+  if (mx === mn) return { h: 0, s: 0, l };
+  const d = mx - mn;
+  const s = d / (l > 0.5 ? 510 - mx - mn : mx + mn);
+  let h;
+  if (mx === r) h = ((g - b) / d + (g < b ? 6 : 0)) * 60;
+  else if (mx === g) h = ((b - r) / d + 2) * 60;
+  else h = ((r - g) / d + 4) * 60;
+  return { h, s, l };
+}
+function analyzeImageStyle(blob) {
+  return blobToB64(blob).then((b64) => {
+    const url = URL.createObjectURL(blob);
+    return loadImageEl(url).then((img) => {
+      URL.revokeObjectURL(url);
+      const N = 64;
+      const c = document.createElement("canvas");
+      c.width = N; c.height = N;
+      const ctx = c.getContext("2d", { willReadFrequently: true });
+      const s = Math.min(img.width, img.height);
+      ctx.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, N, N);
+      const px = ctx.getImageData(0, 0, N, N).data;
+      const hueHist = new Array(12).fill(0);
+      const bins = new Map();
+      let satSum = 0, lumSum = 0, lumSqSum = 0, chroma = 0;
+      const gray = new Float32Array(N * N);
+      for (let i = 0, p = 0; i < px.length; i += 4, p++) {
+        const r = px[i], g = px[i + 1], b = px[i + 2];
+        gray[p] = 0.299 * r + 0.587 * g + 0.114 * b;
+        const { h, s, l } = rgbToHsl(r, g, b);
+        satSum += s; lumSum += l; lumSqSum += l * l;
+        if (s > 0.15 && l > 0.08 && l < 0.92) {
+          chroma++;
+          hueHist[Math.min(11, Math.floor(h / 30))] += 1;
+        }
+        if (l > 0.1) {
+          const key = (Math.round(r / 64) << 4) | (Math.round(g / 64) << 2) | Math.round(b / 64);
+          const e = bins.get(key);
+          if (e) { e.n++; e.r += r; e.g += g; e.b += b; }
+          else bins.set(key, { n: 1, r, g, b });
+        }
+      }
+      const total = N * N;
+      const avgSat = satSum / total;
+      const avgLum = lumSum / total;
+      const lumStd = Math.sqrt(Math.max(0, lumSqSum / total - avgLum * avgLum)) * 255;
+      const chromaRatio = chroma / total;
+      let edge = 0;
+      for (let y = 0; y < N - 1; y++)
+        for (let x = 0; x < N - 1; x++) {
+          const i = y * N + x;
+          edge += Math.abs(gray[i] - gray[i + 1]) + Math.abs(gray[i] - gray[i + N]);
+        }
+      const edgeDensity = edge / ((N - 1) * (N - 1) * 2 * 255);
+      const tags = [];
+      if (chromaRatio < 0.06) tags.push("monochrome");
+      else if (chromaRatio < 0.2) tags.push("limited palette");
+      else if (avgSat >= 0.62) tags.push("vibrant colors");
+      else if (avgSat >= 0.3) tags.push("muted colors");
+      else tags.push("pastel colors");
+      if (avgLum <= 0.32) tags.push("dark palette");
+      else if (avgLum >= 0.68) tags.push("bright");
+      if (lumStd >= 64) tags.push("high contrast");
+      else if (lumStd <= 28) tags.push("low contrast");
+      if (edgeDensity >= 0.15) tags.push("detailed");
+      else if (edgeDensity <= 0.05) tags.push("flat color");
+      const sortedHues = hueHist.map((n, i) => ({ i, n })).sort((a, b) => b.n - a.n);
+      if (chroma > 0 && sortedHues[0].n / chroma > 0.3)
+        tags.push(STYLE_HUE_NAMES[sortedHues[0].i] + " theme");
+      const palette = [...bins.values()]
+        .sort((a, b) => b.n - a.n).slice(0, 5)
+        .map((e) => "#" + [e.r / e.n, e.g / e.n, e.b / e.n].map((v) => Math.round(v).toString(16).padStart(2, "0")).join(""))
+        .map((h) => (h.length === 4 ? h + h.slice(1) : h));
+      return { tags, palette, b64 };
+    });
+  });
+}
+function showStyleExtractResult(res) {
+  const box = $("styleExtractResult");
+  $("styleSwatches").innerHTML = res.palette
+    .map((hex) => `<span class="swatch" style="background:${hex}" title="${hex}"></span>`)
+    .join("");
+  $("styleExtractTags").textContent = res.tags.join(", ") || "（未得出明显特征）";
+  box.classList.remove("hidden");
+}
+async function extractStyleFromBlob(blob) {
+  if (!blob) {
+    toast("没有可分析的图片", "warn");
+    return;
+  }
+  toast("正在分析画风…", "ok");
+  const res = await analyzeImageStyle(blob);
+  lastStyleExtract = res;
+  showStyleExtractResult(res);
+}
+async function aiStyleAnalyze() {
+  if (!lastStyleExtract || !lastStyleExtract.b64) {
+    toast("先从图片做一次本地提取，再进行 AI 深度分析", "warn");
+    return;
+  }
+  const vm = settings.visionModel;
+  if (!vm) {
+    toast("先在设置里填「视觉分析模型」才能 AI 深度分析", "warn");
+    openSettings();
+    return;
+  }
+  toast(`正在用 ${vm} 深度分析画风…`, "ok");
+  const text = await requestVisionAnalysis(settings, vm, lastStyleExtract.b64);
+  let aiTags = [];
+  let summary = "";
+  try {
+    const m = text.match(/\{[\s\S]*\}/);
+    const j = JSON.parse(m ? m[0] : text);
+    aiTags = Array.isArray(j.tags) ? j.tags : Array.isArray(j.styleTags) ? j.styleTags : [];
+    summary = j.summary || "";
+  } catch (e) {
+    aiTags = text.split(/[，,\n]/).map((s) => s.trim()).filter((s) => s && s.length < 40).slice(0, 22);
+  }
+  const merged = [...new Set([...lastStyleExtract.tags, ...aiTags.map((t) => String(t).trim().toLowerCase()).filter(Boolean)])];
+  lastStyleExtract = { ...lastStyleExtract, tags: merged, summary };
+  showStyleExtractResult(lastStyleExtract);
+  toast(summary ? `AI 分析完成：${summary.slice(0, 60)}` : `AI 分析完成，共 ${merged.length} 个风格标签`, "ok");
+}
+function bindStyleExtraction() {
+  $("extractFromFileBtn").addEventListener("click", () => $("styleExtractFileInput").click());
+  $("styleExtractFileInput").addEventListener("change", (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (f) extractStyleFromBlob(f).catch((err) => toast("提取失败: " + (err.message || err), "error"));
+    e.target.value = "";
+  });
+  $("extractFromCanvasBtn").addEventListener("click", async () => {
+    try {
+      if (!currentImage || !currentImage.blob) {
+        toast("画布上还没有图片，先生成或在历史里点一张图", "warn");
+        return;
+      }
+      await extractStyleFromBlob(currentImage.blob);
+    } catch (err) {
+      toast("提取失败: " + (err.message || err), "error");
+    }
+  });
+  $("aiStyleAnalyzeBtn").addEventListener("click", () =>
+    aiStyleAnalyze().catch((err) => toast("AI 分析失败: " + (err.message || err), "error"))
+  );
+  $("useExtractedStyleBtn").addEventListener("click", () => {
+    if (!lastStyleExtract) return;
+    openStylePresetForm(null);
+    $("spName").value = "提取画风 " + new Date().toLocaleDateString("zh-CN");
+    $("spTags").value = lastStyleExtract.tags.join(", ");
+    refreshTagChipStates();
+    toast("已填入预设表单，可继续补充画师串后保存", "ok");
+  });
+}
+
 function init() {
   loadState();
   loadCachedModels();
@@ -2176,6 +2355,7 @@ function init() {
   bindVibeTransfer();
   bindArtistLibrary();
   bindStylePresets();
+  bindStyleExtraction();
   bindSizeControls();
   bindSliders();
   bindCountSeg();
