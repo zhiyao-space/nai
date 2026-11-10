@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NovelAI 图像生成</title>
-<link rel="stylesheet" href="css/style.css?v=20261110a">
+<link rel="stylesheet" href="css/style.css?v=20261110c">
 </head>
 <body>
 
@@ -76,6 +76,26 @@
             <button class="mini-btn" id="exportStylePresetsBtn" type="button">导出</button>
             <button class="mini-btn" id="importStylePresetsBtn" type="button">导入</button>
             <input type="file" id="stylePresetFileInput" accept="application/json,.json" class="hidden">
+          </div>
+          <div class="extract-block">
+            <div class="card-title clickable" data-collapse-toggle>
+              <span>从图片提取画风 <button class="hint-btn" title="这是什么？">?</button></span>
+              <svg class="chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            <p class="hint-text hidden">这就是「氛围转移」的替代方案：选一张喜欢的图，本站自动把它的画风翻译成风格参数——本地分析配色/明暗/对比/细节密度，填了视觉分析模型后还能让 AI 深度解读线条、上色、光影等细节。结果一键填入预设，之后每张图都保持这种画风，全程不需要中转站支持参考图。</p>
+            <div class="collapsible-body">
+              <div class="preset-actions">
+                <button class="mini-btn" id="extractFromCanvasBtn" type="button">从画布当前图提取</button>
+                <button class="mini-btn" id="extractFromFileBtn" type="button">从本地图片提取</button>
+                <button class="mini-btn" id="aiStyleAnalyzeBtn" type="button">AI 深度分析</button>
+                <input type="file" id="styleExtractFileInput" accept="image/*" class="hidden">
+              </div>
+              <div id="styleExtractResult" class="extract-result hidden">
+                <div class="swatch-row" id="styleSwatches"></div>
+                <p class="extract-tags" id="styleExtractTags"></p>
+                <button class="mini-btn" id="useExtractedStyleBtn" type="button">填入预设表单</button>
+              </div>
+            </div>
           </div>
           <div id="stylePresetForm" class="preset-form hidden">
             <input type="text" id="spName" placeholder="预设名称，如：清新水彩">
@@ -420,6 +440,11 @@
         <p class="hint-text hidden">画师串搜索用的标签库地址，默认 Danbooru 官方。连不上时可填镜像或代理地址，搜索失败会自动回退到内置离线合集。</p>
         <input type="text" id="artistBase" placeholder="https://danbooru.donmai.us" autocomplete="off">
       </div>
+      <div class="field">
+        <label>视觉分析模型 (可选) <button class="hint-btn" title="这是什么？">?</button></label>
+        <p class="hint-text hidden">用于画风提取的「AI 深度分析」。填中转站里的多模态聊天模型名，如 gpt-4o-mini、gemini-2.5-flash、claude 系列。留空则只用本地分析（配色/对比/明暗/细节密度），不影响生成。</p>
+        <input type="text" id="visionModel" placeholder="如 gpt-4o-mini，留空不启用" autocomplete="off">
+      </div>
       <button class="ghost-btn" id="fetchModelsBtn">重新拉取模型列表</button>
     </div>
     <div class="modal-foot">
@@ -431,11 +456,11 @@
 
 <div id="toast" class="toast"></div>
 
-<script src="js/zip.js?v=20261110a"></script>
-<script src="js/db.js?v=20261110a"></script>
-<script src="js/api.js?v=20261110a"></script>
-<script src="js/pngmeta.js?v=20261110a"></script>
-<script src="js/artists.js?v=20261110a"></script>
-<script src="js/app.js?v=20261110b"></script>
+<script src="js/zip.js?v=20261110c"></script>
+<script src="js/db.js?v=20261110c"></script>
+<script src="js/api.js?v=20261110c"></script>
+<script src="js/pngmeta.js?v=20261110c"></script>
+<script src="js/artists.js?v=20261110c"></script>
+<script src="js/app.js?v=20261110c"></script>
 </body>
 </html>
