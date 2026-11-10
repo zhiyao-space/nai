@@ -554,11 +554,12 @@ input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border-radius
   gap: 6px;
   opacity: 0;
   transition: opacity 0.15s;
+  pointer-events: none; /* 隐形层不得拦截对缩略图本体的点击 */
 }
 
 .history-item:hover .hover-actions { opacity: 1; }
 
-.hover-actions .icon-btn { padding: 5px; }
+.hover-actions .icon-btn { padding: 5px; pointer-events: auto; }
 
 /* ---------- Modal ---------- */
 
@@ -989,6 +990,8 @@ body.view-history .panel-right { display: flex; }
   }
   .canvas-bar { height: 50px; }
   #mainImage { max-width: calc(100% - 16px); max-height: calc(100% - 100px); }
+  /* 触屏没有悬停态: 隐形按钮不可发现也不可靠, 点缩略图一律看大图 */
+  .history-item .hover-actions { display: none; }
 }
 
 @media (min-width: 1000px) {

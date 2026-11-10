@@ -1294,6 +1294,22 @@ async function loadHistory() {
   }
 }
 
+async function removeRecord(rec, el) {
+  await dbDelete(rec.id);
+  if (objectUrls.has(rec.id)) { URL.revokeObjectURL(objectUrls.get(rec.id)); objectUrls.delete(rec.id); }
+  if (el) el.remove();
+  if (currentImage && currentImage.id === rec.id) {
+    $("mainImage").classList.add("hidden");
+    $("canvasBar").classList.add("hidden");
+    $("canvasEmpty").classList.remove("hidden");
+    currentImage = null;
+  }
+  const remaining = $("historyGrid").querySelectorAll(".history-item").length;
+  $("historyCount").textContent = remaining ? `(${remaining})` : "";
+  updateNavHistoryCount();
+  if (!remaining) $("historyGrid").innerHTML = '<div class="history-empty">暂无历史记录</div>';
+}
+
 function buildHistoryItem(rec) {
   const el = document.createElement("div");
   el.className = "history-item" + (currentImage && currentImage.id === rec.id ? " active" : "");
@@ -1329,19 +1345,7 @@ function buildHistoryItem(rec) {
   del.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>';
   del.addEventListener("click", async (e) => {
     e.stopPropagation();
-    await dbDelete(rec.id);
-    if (objectUrls.has(rec.id)) { URL.revokeObjectURL(objectUrls.get(rec.id)); objectUrls.delete(rec.id); }
-    el.remove();
-    if (currentImage && currentImage.id === rec.id) {
-      $("mainImage").classList.add("hidden");
-      $("canvasBar").classList.add("hidden");
-      $("canvasEmpty").classList.remove("hidden");
-      currentImage = null;
-    }
-    const remaining = $("historyGrid").querySelectorAll(".history-item").length;
-    $("historyCount").textContent = remaining ? `(${remaining})` : "";
-    updateNavHistoryCount();
-    if (!remaining) $("historyGrid").innerHTML = '<div class="history-empty">暂无历史记录</div>';
+    await removeRecord(rec, el);
   });
 
   actions.appendChild(reuse);
@@ -1798,6 +1802,12 @@ function bindCanvasActions() {
   });
   $("downloadBtn").addEventListener("click", () => {
     if (currentImage) downloadImage(currentImage);
+  });
+  $("deleteBtn").addEventListener("click", async () => {
+    if (!currentImage) return;
+    const el = document.querySelector(`.history-item[data-id="${currentImage.id}"]`);
+    await removeRecord(currentImage, el);
+    toast("已删除该图像", "ok");
   });
   $("generateBtn").addEventListener("click", generate);
   $("cancelGenBtn").addEventListener("click", () => cancelGeneration("user"));
