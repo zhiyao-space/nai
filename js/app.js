@@ -55,8 +55,6 @@ const DEFAULT_SETTINGS = {
   model: "nai-diffusion-4-5-curated",
   customModel: "",
   artistBase: "https://danbooru.donmai.us",
-  visionBase: "",
-  visionKey: "",
   visionModel: ""
 };
 
@@ -80,6 +78,7 @@ let relayModels = [];
 let modelFilterText = "";
 let modelImageOnly = false;
 let modelSearchTimer = null;
+let visionSearchTimer = null;
 
 /* ---------- persistence ---------- */
 
@@ -272,7 +271,7 @@ async function refreshRelayModels(opts = {}) {
     relayModels = ids;
     try { localStorage.setItem(LS_MODELS, JSON.stringify(ids)); } catch (e) {}
     buildModelSelect();
-    if (!$("settingsModal").classList.contains("hidden")) fillApiModelSelect();
+    if (!$("settingsModal").classList.contains("hidden")) { fillApiModelSelect(); fillVisionModelSelect(); }
     if (!opts.silent) {
       const imgCount = ids.filter(looksLikeImageModel).length;
       toast(imgCount ? `已拉取 ${ids.length} 个模型，自动识别出 ${imgCount} 个绘画模型` : `已拉取 ${ids.length} 个中转站模型`, "ok");
@@ -1688,9 +1687,8 @@ function openSettings() {
   $("apiPath").value = settings.path;
   $("apiModelCustom").value = settings.customModel;
   $("artistBase").value = settings.artistBase || "";
-  $("visionBase").value = settings.visionBase || "";
-  $("visionKey").value = settings.visionKey || "";
-  $("visionModel").value = settings.visionModel || "";
+  $("visionModelSearch").value = "";
+  fillVisionModelSelect();
   fillApiModelSelect();
   $("settingsModal").classList.remove("hidden");
 }
@@ -1754,6 +1752,50 @@ function fillApiModelSelect() {
   }
 }
 
+function fillVisionModelSelect() {
+  const sel = $("visionModelSelect");
+  if (!sel) return;
+  const rawQ = ($("visionModelSearch").value || "").trim();
+  const q = rawQ.toLowerCase();
+  const current = settings.visionModel || "";
+  sel.innerHTML = "";
+  if (!relayModels.length) {
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = "保存设置后自动拉取模型列表";
+    sel.appendChild(opt);
+  } else {
+    const list = q ? relayModels.filter((id) => id.toLowerCase().includes(q)) : relayModels;
+    if (!list.length) {
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.disabled = true;
+      opt.textContent = "没有匹配的模型";
+      sel.appendChild(opt);
+    } else {
+      for (const id of list) {
+        const opt = document.createElement("option");
+        opt.value = id;
+        opt.textContent = id;
+        sel.appendChild(opt);
+      }
+    }
+    if (rawQ && !relayModels.includes(rawQ)) {
+      const opt = document.createElement("option");
+      opt.value = rawQ;
+      opt.textContent = "自定义: " + rawQ;
+      sel.appendChild(opt);
+    }
+  }
+  if (current && !sel.querySelector(`option[value="${CSS.escape(current)}"]`)) {
+    const opt = document.createElement("option");
+    opt.value = current;
+    opt.textContent = "当前: " + current;
+    sel.insertBefore(opt, sel.firstChild);
+  }
+  if (current) sel.value = current;
+}
+
 function bindSettingsModal() {
   $("settingsBtn").addEventListener("click", openSettings);
   $("closeSettingsBtn").addEventListener("click", closeSettings);
@@ -1769,9 +1811,7 @@ function bindSettingsModal() {
     settings.customModel = $("apiModelCustom").value.trim();
     settings.model = $("apiModelSelect").value || settings.model;
     settings.artistBase = $("artistBase").value.trim() || "https://danbooru.donmai.us";
-    settings.visionBase = $("visionBase").value.trim();
-    settings.visionKey = $("visionKey").value.trim();
-    settings.visionModel = $("visionModel").value.trim();
+    settings.visionModel = $("visionModelSelect").value.trim();
     params.model = settings.model;
     saveSettings();
     saveParams();
@@ -1804,6 +1844,10 @@ function bindSettingsModal() {
     modelImageOnly = !modelImageOnly;
     $("imageModelFilterBtn").classList.toggle("active", modelImageOnly);
     fillApiModelSelect();
+  });
+  $("visionModelSearch").addEventListener("input", () => {
+    clearTimeout(visionSearchTimer);
+    visionSearchTimer = setTimeout(fillVisionModelSelect, 150);
   });
 }
 
@@ -2344,8 +2388,7 @@ async function aiStyleAnalyze() {
     return;
   }
   toast(`正在用 ${vm} 深度分析画风…`, "ok");
-  const visionCfg = { base: settings.visionBase || settings.base, key: settings.visionKey || settings.key };
-  const text = await requestVisionAnalysis(visionCfg, vm, lastStyleExtract.b64);
+  const text = await requestVisionAnalysis(settings, vm, lastStyleExtract.b64);
   let aiTags = [];
   let summary = "";
   try {
