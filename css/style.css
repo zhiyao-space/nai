@@ -957,6 +957,62 @@ input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border-radius
   justify-content: flex-end;
 }
 
+/* ---------- Style tag picker (画风标签细化) ---------- */
+
+.style-tag-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.tag-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.tag-group-label {
+  flex: 0 0 64px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  padding-top: 3px;
+}
+
+.tag-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.tag-chip {
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  color: var(--text-dim);
+  font-size: 11px;
+  border-radius: 999px;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+
+.tag-chip.on {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.artist-weight-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 /* ---------- Hint system ---------- */
 
 .hint-btn {
