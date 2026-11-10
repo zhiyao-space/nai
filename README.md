@@ -81,7 +81,7 @@ python3 -m http.server 8080
   index.html      页面结构
   css/style.css   NovelAI 风格主题
   js/api.js       中转站 API 兼容层 (两种格式 / 参数构建 / 错误处理 / 超时)
-  js/pngmeta.js   PNG 生成参数元数据 (官方兼容的 tEXt Comment 块读写)
+  js/pngmeta.js   PNG 生成参数元数据 (官方兼容 tEXt Comment 块 + alpha 隐形通道读写)
   js/artists.js   Danbooru 画师串源库 (搜索 / 预览 / 离线合集)
   js/zip.js       NovelAI ZIP 响应解压与 PNG 提取
   js/db.js        IndexedDB 历史记录
