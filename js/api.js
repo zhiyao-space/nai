@@ -1,6 +1,7 @@
 const NAI_MODELS = [
   { id: "nai-diffusion-4-5-curated", name: "NAI Diffusion V4.5 Curated", family: 4 },
   { id: "nai-diffusion-4-5-full", name: "NAI Diffusion V4.5 Full", family: 4 },
+  { id: "nai-diffusion-4-5-inpainting", name: "NAI Diffusion V4.5 Inpainting", family: 4 },
   { id: "nai-diffusion-4-full", name: "NAI Diffusion V4 Full", family: 4 },
   { id: "nai-diffusion-4-curated-preview", name: "NAI Diffusion V4 Curated (Preview)", family: 4 },
   { id: "nai-diffusion-3", name: "NAI Diffusion V3", family: 3 },
@@ -118,10 +119,8 @@ function buildNaiPayload(p) {
     noise_schedule: p.noiseSchedule,
     legacy_v3_extend: false,
     skip_cfg_above_sigma: p.variety > 0 ? computeSkipCfgAboveSigma(p.width, p.height, p.model) : null,
-    deliberate_euler_ancestral_bug: false,
-    prefer_brownian: true,
     uncond_scale: 1,
-    inpaintImg2ImgStrength: action === "generate" ? 0 : 1
+    inpaintImg2ImgStrength: action === "inpaint" ? p.strength : 0
   };
 
   if (i2i) {
@@ -136,6 +135,8 @@ function buildNaiPayload(p) {
   }
 
   if (isV4) {
+    params.deliberate_euler_ancestral_bug = false;
+    params.prefer_brownian = true;
     const chars = (p.characters || []).filter((c) => c.prompt && c.prompt.trim());
     const useCoords = !!p.useCoords && chars.length > 0;
     const vibes = (p.vibes || []).filter((v) => v.b64);
@@ -263,17 +264,31 @@ async function readErrorResponse(res) {
   throw new Error(detail ? `${prefix}: ${detail}` : prefix);
 }
 
-async function generateNai(cfg, payload) {
+function friendlyNetworkError(e) {
+  if (e && e.name === "AbortError") return e;
+  if (e instanceof TypeError) {
+    return new Error("无法连接中转站：请检查地址拼写和网络；地址没错的话，通常是中转站未开启跨域 (CORS)，需联系服务商处理");
+  }
+  return e;
+}
+
+async function generateNai(cfg, payload, signal) {
   const url = resolveApiUrl(cfg.base, "nai", cfg.path);
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${cfg.key}`,
-      "accept": "application/x-zip-compressed, application/zip, application/json"
-    },
-    body: JSON.stringify(payload)
-  });
+  let res;
+  try {
+    res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${cfg.key}`,
+        "accept": "application/x-zip-compressed, application/zip, application/json"
+      },
+      body: JSON.stringify(payload),
+      signal
+    });
+  } catch (e) {
+    throw friendlyNetworkError(e);
+  }
 
   const ctype = res.headers.get("content-type") || "";
   if (!res.ok) {
@@ -293,16 +308,22 @@ async function generateNai(cfg, payload) {
   return blobs;
 }
 
-async function generateOpenai(cfg, payload) {
+async function generateOpenai(cfg, payload, signal) {
   const url = resolveApiUrl(cfg.base, "openai", cfg.path);
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${cfg.key}`
-    },
-    body: JSON.stringify(payload)
-  });
+  let res;
+  try {
+    res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${cfg.key}`
+      },
+      body: JSON.stringify(payload),
+      signal
+    });
+  } catch (e) {
+    throw friendlyNetworkError(e);
+  }
 
   const ctype = res.headers.get("content-type") || "";
   if (!res.ok && ctype.includes("json")) await readErrorResponse(res);
@@ -321,8 +342,13 @@ async function generateOpenai(cfg, payload) {
       for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
       blobs.push(new Blob([bytes], { type: "image/png" }));
     } else if (item.url) {
-      let r = await fetch(item.url);
-      if (!r.ok) r = await fetch(item.url, { headers: { "Authorization": `Bearer ${cfg.key}` } });
+      let r;
+      try {
+        r = await fetch(item.url);
+        if (!r.ok) r = await fetch(item.url, { headers: { "Authorization": `Bearer ${cfg.key}` } });
+      } catch (e) {
+        throw friendlyNetworkError(e);
+      }
       if (!r.ok) throw new Error(`下载图像失败 (${r.status})`);
       blobs.push(await r.blob());
     }
@@ -331,9 +357,9 @@ async function generateOpenai(cfg, payload) {
   return blobs;
 }
 
-async function generate(cfg, params) {
+async function requestGeneration(cfg, params, signal) {
   const payload = cfg.format === "openai" ? buildOpenAiPayload(params) : buildNaiPayload(params);
-  return cfg.format === "openai" ? generateOpenai(cfg, payload) : generateNai(cfg, payload);
+  return cfg.format === "openai" ? generateOpenai(cfg, payload, signal) : generateNai(cfg, payload, signal);
 }
 
 async function fetchModelList(cfg) {
@@ -341,7 +367,12 @@ async function fetchModelList(cfg) {
   if (!b) throw new Error("请先填写中转站地址");
   if (!/^https?:\/\//i.test(b)) b = "https://" + b;
   const url = /\/v1$/.test(b) ? b + "/models" : b + "/v1/models";
-  const res = await fetch(url, { headers: { "Authorization": `Bearer ${cfg.key}` } });
+  let res;
+  try {
+    res = await fetch(url, { headers: { "Authorization": `Bearer ${cfg.key}` } });
+  } catch (e) {
+    throw friendlyNetworkError(e);
+  }
   if (!res.ok) await readErrorResponse(res);
   const json = await res.json();
   const ids = (json.data || []).map((m) => m.id).filter(Boolean).sort();
