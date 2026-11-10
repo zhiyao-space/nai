@@ -1,3 +1,28 @@
+async function requestChatText(cfg, model, systemText, userText, maxTokens) {
+  let b = (cfg.base || "").trim();
+  if (!b) throw new Error("请先在设置中填写中转站地址");
+  if (!/^https?:\/\//i.test(b)) b = "https://" + b;
+  b = b.replace(/\/+$/, "");
+  const res = await fetch(b + "/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: "Bearer " + (cfg.key || "") },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: "system", content: systemText },
+        { role: "user", content: userText }
+      ],
+      max_tokens: maxTokens || 800
+    })
+  });
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    throw new Error(`HTTP ${res.status} ${t.slice(0, 140)}`);
+  }
+  const data = await res.json();
+  return ((((data.choices || [])[0] || {}).message || {}).content || "");
+}
+
 async function requestVisionAnalysis(cfg, model, b64) {
   let b = (cfg.base || "").trim();
   if (!b) throw new Error("请先在设置中填写中转站地址");

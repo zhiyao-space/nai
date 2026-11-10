@@ -55,7 +55,8 @@ const DEFAULT_SETTINGS = {
   model: "nai-diffusion-4-5-curated",
   customModel: "",
   artistBase: "https://danbooru.donmai.us",
-  visionModel: ""
+  visionModel: "",
+  translateModel: ""
 };
 
 let settings = { ...DEFAULT_SETTINGS };
@@ -79,6 +80,7 @@ let modelFilterText = "";
 let modelImageOnly = false;
 let modelSearchTimer = null;
 let visionSearchTimer = null;
+let translateSearchTimer = null;
 
 /* ---------- persistence ---------- */
 
@@ -271,7 +273,7 @@ async function refreshRelayModels(opts = {}) {
     relayModels = ids;
     try { localStorage.setItem(LS_MODELS, JSON.stringify(ids)); } catch (e) {}
     buildModelSelect();
-    if (!$("settingsModal").classList.contains("hidden")) { fillApiModelSelect(); fillVisionModelSelect(); }
+    if (!$("settingsModal").classList.contains("hidden")) { fillApiModelSelect(); fillVisionModelSelect(); fillTranslateModelSelect(); }
     if (!opts.silent) {
       const imgCount = ids.filter(looksLikeImageModel).length;
       toast(imgCount ? `已拉取 ${ids.length} 个模型，自动识别出 ${imgCount} 个绘画模型` : `已拉取 ${ids.length} 个中转站模型`, "ok");
@@ -1689,6 +1691,8 @@ function openSettings() {
   $("artistBase").value = settings.artistBase || "";
   $("visionModelSearch").value = "";
   fillVisionModelSelect();
+  $("translateModelSearch").value = "";
+  fillTranslateModelSelect();
   fillApiModelSelect();
   $("settingsModal").classList.remove("hidden");
 }
@@ -1752,12 +1756,12 @@ function fillApiModelSelect() {
   }
 }
 
-function fillVisionModelSelect() {
-  const sel = $("visionModelSelect");
+function fillRelaySearchSelect(searchId, selId, current) {
+  const sel = $(selId);
   if (!sel) return;
-  const rawQ = ($("visionModelSearch").value || "").trim();
+  const searchEl = $(searchId);
+  const rawQ = ((searchEl && searchEl.value) || "").trim();
   const q = rawQ.toLowerCase();
-  const current = settings.visionModel || "";
   sel.innerHTML = "";
   if (!relayModels.length) {
     const opt = document.createElement("option");
@@ -1796,6 +1800,14 @@ function fillVisionModelSelect() {
   if (current) sel.value = current;
 }
 
+function fillVisionModelSelect() {
+  fillRelaySearchSelect("visionModelSearch", "visionModelSelect", settings.visionModel || "");
+}
+
+function fillTranslateModelSelect() {
+  fillRelaySearchSelect("translateModelSearch", "translateModelSelect", settings.translateModel || "");
+}
+
 function bindSettingsModal() {
   $("settingsBtn").addEventListener("click", openSettings);
   $("closeSettingsBtn").addEventListener("click", closeSettings);
@@ -1812,6 +1824,7 @@ function bindSettingsModal() {
     settings.model = $("apiModelSelect").value || settings.model;
     settings.artistBase = $("artistBase").value.trim() || "https://danbooru.donmai.us";
     settings.visionModel = $("visionModelSelect").value.trim();
+    settings.translateModel = $("translateModelSelect").value.trim();
     params.model = settings.model;
     saveSettings();
     saveParams();
@@ -1848,6 +1861,10 @@ function bindSettingsModal() {
   $("visionModelSearch").addEventListener("input", () => {
     clearTimeout(visionSearchTimer);
     visionSearchTimer = setTimeout(fillVisionModelSelect, 150);
+  });
+  $("translateModelSearch").addEventListener("input", () => {
+    clearTimeout(translateSearchTimer);
+    translateSearchTimer = setTimeout(fillTranslateModelSelect, 150);
   });
 }
 
@@ -2404,6 +2421,62 @@ async function aiStyleAnalyze() {
   showStyleExtractResult(lastStyleExtract);
   toast(summary ? `AI 分析完成：${summary.slice(0, 60)}` : `AI 分析完成，共 ${merged.length} 个风格标签`, "ok");
 }
+const TRANSLATE_SYSTEM =
+  "You are a translator for NovelAI image prompts. Translate the user's Chinese prompt into concise English danbooru-style tags. " +
+  "Rules: keep weight syntax such as {…} and […] wrapping the translated content, keep artist:xxx tags and any already-English words unchanged, " +
+  "separate tags with commas, no sentences or explanations, output ONLY the translated prompt.";
+
+async function translatePromptText(text) {
+  return await requestChatText(
+    { base: settings.base, key: settings.key },
+    settings.translateModel,
+    TRANSLATE_SYSTEM,
+    text,
+    900
+  );
+}
+
+function wireTranslateButton(btnId, taId) {
+  const btn = $(btnId);
+  if (!btn) return;
+  btn.addEventListener("click", async () => {
+    const ta = $(taId);
+    const text = (ta.value || "").trim();
+    if (!text) {
+      toast("内容为空，无需翻译", "warn");
+      return;
+    }
+    if (!settings.translateModel) {
+      toast("先在设置里选「翻译模型」再翻译", "warn");
+      openSettings();
+      return;
+    }
+    if (!/[\u4e00-\u9fff]/.test(text)) {
+      toast("没有检测到中文，无需翻译", "ok");
+      return;
+    }
+    btn.disabled = true;
+    const old = btn.textContent;
+    btn.textContent = "翻译中…";
+    try {
+      const out = (await translatePromptText(text)).trim();
+      if (!out) throw new Error("模型返回为空");
+      ta.value = out;
+      ta.dispatchEvent(new Event("input"));
+      toast("已翻译为英文", "ok");
+    } catch (e) {
+      toast("翻译失败: " + (e.message || e), "error", 5000);
+    }
+    btn.disabled = false;
+    btn.textContent = old;
+  });
+}
+
+function bindTranslateButtons() {
+  wireTranslateButton("translatePromptBtn", "promptInput");
+  wireTranslateButton("translateNegativeBtn", "negativeInput");
+}
+
 function bindStyleExtraction() {
   $("extractFromFileBtn").addEventListener("click", () => $("styleExtractFileInput").click());
   $("styleExtractFileInput").addEventListener("change", (e) => {
@@ -2527,6 +2600,7 @@ function init() {
   bindArtistLibrary();
   bindStylePresets();
   bindStyleExtraction();
+  bindTranslateButtons();
   bindSizeControls();
   bindSliders();
   bindCountSeg();
