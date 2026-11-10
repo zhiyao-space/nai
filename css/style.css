@@ -864,6 +864,99 @@ input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border-radius
   padding: 2px;
 }
 
+/* ---------- Style presets (画风预设) ---------- */
+
+.preset-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.preset-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elev);
+}
+
+.preset-item.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.preset-name {
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.preset-item.active .preset-name { color: var(--accent); }
+
+.preset-desc {
+  flex: 1;
+  min-width: 0;
+  font-size: 11px;
+  color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preset-ops {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.mini-btn.danger { color: var(--danger); }
+
+.preset-status {
+  font-size: 12px;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+.preset-status.hidden { display: none; }
+
+.preset-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.preset-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.preset-form.hidden { display: none; }
+
+.preset-form textarea,
+.preset-form input,
+.preset-form select { width: 100%; }
+
+.preset-param-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.preset-form-btns {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 /* ---------- Hint system ---------- */
 
 .hint-btn {

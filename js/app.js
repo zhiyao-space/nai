@@ -1515,6 +1515,7 @@ function buildMeta(p) {
     steps: p.steps,
     scale: p.scale,
     sampler: p.sampler,
+    stylePreset: p.stylePresetName || null,
     noiseSchedule: p.noiseSchedule,
     seed: p.seed,
     qualityOn: p.qualityOn,
@@ -1564,6 +1565,8 @@ async function generate() {
     }
   }
   const p = collectParams();
+  const activePreset = getActiveStylePreset();
+  if (activePreset) applyStylePreset(p, activePreset);
   if (!p.prompt.trim() && !p.characters.some((c) => c.prompt.trim())) {
     toast("请先输入提示词 (Prompt) 或角色提示词", "warn");
     return;
@@ -1858,6 +1861,242 @@ function bindClearHistory() {
 
 /* ---------- init ---------- */
 
+/* ---------- style presets (画风预设) ---------- */
+
+const LS_PRESETS = "nai_style_presets_v1";
+let stylePresets = [];
+let editingStylePresetId = null;
+
+function loadStylePresets() {
+  try {
+    const a = JSON.parse(localStorage.getItem(LS_PRESETS) || "[]");
+    if (Array.isArray(a)) stylePresets = a.filter((x) => x && x.name);
+  } catch (e) { stylePresets = []; }
+}
+function saveStylePresets() {
+  localStorage.setItem(LS_PRESETS, JSON.stringify(stylePresets));
+}
+function getActiveStylePreset() {
+  if (!settings.activeStylePreset) return null;
+  return stylePresets.find((s) => s.id === settings.activeStylePreset) || null;
+}
+function joinTags(...parts) {
+  return parts
+    .map((s) => (s || "").trim().replace(/^,+|,+$/g, "").replace(/,\s*,/g, ","))
+    .filter(Boolean)
+    .join(", ");
+}
+function applyStylePreset(p, sp) {
+  const front = joinTags(sp.artistString, sp.styleTags);
+  if (front) p.prompt = front + (p.prompt.trim() ? ", " + p.prompt.trim() : "");
+  if ((sp.ucExtra || "").trim()) p.negative = joinTags(p.negative, sp.ucExtra);
+  const pv = sp.params || {};
+  if (pv.model) p.model = pv.model;
+  if (pv.sampler) p.sampler = pv.sampler;
+  if (pv.steps !== "" && pv.steps != null) p.steps = +pv.steps;
+  if (pv.scale !== "" && pv.scale != null) p.scale = +pv.scale;
+  if (pv.cfgRescale !== "" && pv.cfgRescale != null) p.cfgRescale = +pv.cfgRescale;
+  if (pv.variety !== "" && pv.variety != null) p.variety = +pv.variety;
+  p.stylePresetName = sp.name;
+}
+function toggleStylePreset(id) {
+  settings.activeStylePreset = settings.activeStylePreset === id ? null : id;
+  saveSettings();
+  renderStylePresets();
+  const sp = getActiveStylePreset();
+  toast(sp ? `画风预设「${sp.name}」已启用，生成时自动附加` : "已停用画风预设", "ok");
+}
+function deleteStylePreset(id) {
+  const sp = stylePresets.find((s) => s.id === id);
+  if (!confirm(`删除预设「${sp ? sp.name : ""}」？`)) return;
+  stylePresets = stylePresets.filter((s) => s.id !== id);
+  if (settings.activeStylePreset === id) {
+    settings.activeStylePreset = null;
+    saveSettings();
+  }
+  saveStylePresets();
+  renderStylePresets();
+}
+function renderStylePresets() {
+  const list = $("stylePresetList");
+  const status = $("stylePresetStatus");
+  const active = getActiveStylePreset();
+  list.innerHTML = "";
+  if (!stylePresets.length) {
+    const hint = document.createElement("p");
+    hint.className = "field-hint";
+    hint.textContent = "还没有预设。点「用当前设置建预设」一键捕获现在的参数，或「新建预设」手动填写。";
+    list.appendChild(hint);
+  }
+  stylePresets.forEach((sp) => {
+    const row = document.createElement("div");
+    row.className = "preset-item" + (active && active.id === sp.id ? " active" : "");
+    const name = document.createElement("button");
+    name.type = "button";
+    name.className = "preset-name";
+    name.textContent = (active && active.id === sp.id ? "● " : "○ ") + sp.name;
+    name.title = "点击启用 / 停用";
+    name.addEventListener("click", () => toggleStylePreset(sp.id));
+    const desc = document.createElement("span");
+    desc.className = "preset-desc";
+    desc.textContent = joinTags(sp.artistString, sp.styleTags).slice(0, 40) || "纯参数预设";
+    const ops = document.createElement("span");
+    ops.className = "preset-ops";
+    const editBtn = document.createElement("button");
+    editBtn.type = "button";
+    editBtn.className = "mini-btn";
+    editBtn.textContent = "编辑";
+    editBtn.addEventListener("click", () => openStylePresetForm(sp));
+    const delBtn = document.createElement("button");
+    delBtn.type = "button";
+    delBtn.className = "mini-btn danger";
+    delBtn.textContent = "删";
+    delBtn.addEventListener("click", () => deleteStylePreset(sp.id));
+    ops.append(editBtn, delBtn);
+    row.append(name, desc, ops);
+    list.appendChild(row);
+  });
+  if (active) {
+    status.textContent = `启用中：${active.name}（每次生成自动附加画风参数）`;
+    status.classList.remove("hidden");
+  } else {
+    status.textContent = "";
+    status.classList.add("hidden");
+  }
+}
+function fillSamplerOptions(select, chosen) {
+  select.innerHTML = '<option value="">跟随当前</option>';
+  const src = $("samplerSelect");
+  for (const opt of src.options) {
+    const o = document.createElement("option");
+    o.value = opt.value;
+    o.textContent = opt.textContent;
+    select.appendChild(o);
+  }
+  select.value = chosen || "";
+}
+function openStylePresetForm(sp) {
+  editingStylePresetId = sp ? sp.id : null;
+  $("spName").value = sp ? sp.name : "";
+  $("spArtist").value = sp ? sp.artistString || "" : "";
+  $("spTags").value = sp ? sp.styleTags || "" : "";
+  $("spUc").value = sp ? sp.ucExtra || "" : "";
+  const pv = (sp && sp.params) || {};
+  $("spModel").value = pv.model || "";
+  fillSamplerOptions($("spSampler"), pv.sampler || "");
+  $("spSteps").value = pv.steps ?? "";
+  $("spScale").value = pv.scale ?? "";
+  $("spCfg").value = pv.cfgRescale ?? "";
+  $("spVariety").value = pv.variety ?? "";
+  $("stylePresetForm").classList.remove("hidden");
+  $("spName").focus();
+}
+function closeStylePresetForm() {
+  editingStylePresetId = null;
+  $("stylePresetForm").classList.add("hidden");
+}
+function captureStylePresetParams() {
+  const p = collectParams();
+  $("spModel").value = p.model || "";
+  fillSamplerOptions($("spSampler"), p.sampler || "");
+  $("spSteps").value = p.steps ?? "";
+  $("spScale").value = p.scale ?? "";
+  $("spCfg").value = p.cfgRescale ?? "";
+  $("spVariety").value = p.variety ?? "";
+  toast("已捕获当前模型与参数，继续填写画师串和名称", "ok");
+}
+function uid() {
+  return typeof crypto !== "undefined" && crypto.randomUUID
+    ? crypto.randomUUID()
+    : "id-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10);
+}
+function saveStylePresetForm() {
+  const name = $("spName").value.trim();
+  if (!name) {
+    toast("请先给预设起个名字", "warn");
+    return;
+  }
+  const obj = {
+    id: editingStylePresetId || uid(),
+    name,
+    artistString: $("spArtist").value.trim(),
+    styleTags: $("spTags").value.trim(),
+    ucExtra: $("spUc").value.trim(),
+    params: {
+      model: $("spModel").value.trim(),
+      sampler: $("spSampler").value,
+      steps: $("spSteps").value,
+      scale: $("spScale").value,
+      cfgRescale: $("spCfg").value,
+      variety: $("spVariety").value
+    }
+  };
+  if (editingStylePresetId) {
+    const i = stylePresets.findIndex((s) => s.id === editingStylePresetId);
+    if (i >= 0) stylePresets[i] = obj;
+  } else {
+    stylePresets.push(obj);
+  }
+  saveStylePresets();
+  closeStylePresetForm();
+  renderStylePresets();
+  toast(`预设「${name}」已保存，点它即可启用`, "ok");
+}
+function exportStylePresets() {
+  if (!stylePresets.length) {
+    toast("还没有可导出的预设", "warn");
+    return;
+  }
+  const blob = new Blob([JSON.stringify({ type: "nai-style-presets", presets: stylePresets }, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "nai-style-presets.json";
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 3000);
+}
+function importStylePresets(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      const arr = Array.isArray(data) ? data : data && Array.isArray(data.presets) ? data.presets : null;
+      if (!arr) throw new Error("文件里没有预设数组");
+      let added = 0;
+      for (const sp of arr) {
+        if (!sp || !sp.name) continue;
+        if (stylePresets.some((s) => s.id === sp.id)) continue;
+        stylePresets.push({ ...sp, id: sp.id || uid() });
+        added++;
+      }
+      saveStylePresets();
+      renderStylePresets();
+      toast(added ? `已导入 ${added} 个预设` : "没有新增预设（可能已存在）", "ok");
+    } catch (e) {
+      toast("导入失败: " + (e.message || e), "error");
+    }
+  };
+  reader.readAsText(file);
+}
+function bindStylePresets() {
+  loadStylePresets();
+  $("newStylePresetBtn").addEventListener("click", () => openStylePresetForm(null));
+  $("captureStylePresetBtn").addEventListener("click", () => {
+    openStylePresetForm(null);
+    captureStylePresetParams();
+  });
+  $("exportStylePresetsBtn").addEventListener("click", exportStylePresets);
+  $("importStylePresetsBtn").addEventListener("click", () => $("stylePresetFileInput").click());
+  $("stylePresetFileInput").addEventListener("change", (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (f) importStylePresets(f);
+    e.target.value = "";
+  });
+  $("saveStylePresetBtn").addEventListener("click", saveStylePresetForm);
+  $("cancelStylePresetBtn").addEventListener("click", closeStylePresetForm);
+  renderStylePresets();
+}
+
 function init() {
   loadState();
   loadCachedModels();
@@ -1870,6 +2109,7 @@ function init() {
   bindMaskEditor();
   bindVibeTransfer();
   bindArtistLibrary();
+  bindStylePresets();
   bindSizeControls();
   bindSliders();
   bindCountSeg();
