@@ -63,6 +63,43 @@
 
       <section class="card collapsible open" data-collapsible>
         <div class="card-title clickable" data-collapse-toggle>
+          <span>画风预设 (稳定画风) <button class="hint-btn" title="这是什么？">?</button></span>
+          <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <p class="hint-text hidden">把画师串、风格标签和一组固定参数打包成预设。启用后每次生成自动把这套「画风代码」附加到请求里，不用手动重复输入，画风更稳定。点预设名即启用，再点一次停用；支持导出 JSON 分享给别人。</p>
+        <div class="collapsible-body">
+          <div id="stylePresetList" class="preset-list"></div>
+          <p class="preset-status hidden" id="stylePresetStatus"></p>
+          <div class="preset-actions">
+            <button class="mini-btn" id="newStylePresetBtn" type="button">新建预设</button>
+            <button class="mini-btn" id="captureStylePresetBtn" type="button">用当前设置建预设</button>
+            <button class="mini-btn" id="exportStylePresetsBtn" type="button">导出</button>
+            <button class="mini-btn" id="importStylePresetsBtn" type="button">导入</button>
+            <input type="file" id="stylePresetFileInput" accept="application/json,.json" class="hidden">
+          </div>
+          <div id="stylePresetForm" class="preset-form hidden">
+            <input type="text" id="spName" placeholder="预设名称，如：清新水彩">
+            <textarea id="spArtist" rows="2" spellcheck="false" placeholder="画师串，如 artist:wlop, artist:miv4t（V4.5 推荐 artist: 前缀）"></textarea>
+            <textarea id="spTags" rows="2" spellcheck="false" placeholder="风格标签（可选），如 flat color, soft lighting, watercolor"></textarea>
+            <input type="text" id="spUc" placeholder="额外负向词（可选），如 bad hands, extra digits">
+            <div class="preset-param-grid">
+              <input type="text" id="spModel" placeholder="模型名（留空跟随）">
+              <select id="spSampler"></select>
+              <input type="number" id="spSteps" placeholder="步数（留空跟随）" min="1" max="50">
+              <input type="number" id="spScale" placeholder="引导 Scale（留空跟随）" min="0" max="10" step="0.1">
+              <input type="number" id="spCfg" placeholder="CFG 残差（留空跟随）" min="0" max="1" step="0.05">
+              <input type="number" id="spVariety" placeholder="惊喜度 Variety（留空跟随）" min="0" max="100" step="1">
+            </div>
+            <div class="preset-form-btns">
+              <button class="ghost-btn" id="cancelStylePresetBtn" type="button">取消</button>
+              <button class="primary-btn" id="saveStylePresetBtn" type="button">保存预设</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card collapsible open" data-collapsible>
+        <div class="card-title clickable" data-collapse-toggle>
           <span>氛围转移 (Vibe Transfer) <button class="hint-btn" title="这是什么？">?</button></span>
           <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
