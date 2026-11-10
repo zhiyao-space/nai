@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NovelAI 图像生成</title>
-<link rel="stylesheet" href="css/style.css?v=20261110c">
+<link rel="stylesheet" href="css/style.css?v=20261110d">
 </head>
 <body>
 
@@ -73,22 +73,38 @@
           <div class="preset-actions">
             <button class="mini-btn" id="newStylePresetBtn" type="button">新建预设</button>
             <button class="mini-btn" id="captureStylePresetBtn" type="button">用当前设置建预设</button>
+            <button class="mini-btn" id="abTestBtn" type="button">A/B 验证</button>
             <button class="mini-btn" id="exportStylePresetsBtn" type="button">导出</button>
             <button class="mini-btn" id="importStylePresetsBtn" type="button">导入</button>
             <input type="file" id="stylePresetFileInput" accept="application/json,.json" class="hidden">
+          </div>
+          <div id="abResult" class="extract-result hidden">
+            <p class="extract-tags" id="abSummary"></p>
+            <div class="ab-grid">
+              <figure><img id="abImgA" alt="带预设"><figcaption>A · 带预设「<span id="abPresetName"></span>」</figcaption></figure>
+              <figure><img id="abImgB" alt="不带预设"><figcaption>B · 不带预设（相同 Seed）</figcaption></figure>
+            </div>
           </div>
           <div class="extract-block">
             <div class="card-title clickable" data-collapse-toggle>
               <span>从图片提取画风 <button class="hint-btn" title="这是什么？">?</button></span>
               <svg class="chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
             </div>
-            <p class="hint-text hidden">这就是「氛围转移」的替代方案：选一张喜欢的图，本站自动把它的画风翻译成风格参数——本地分析配色/明暗/对比/细节密度，填了视觉分析模型后还能让 AI 深度解读线条、上色、光影等细节。结果一键填入预设，之后每张图都保持这种画风，全程不需要中转站支持参考图。</p>
+            <p class="hint-text hidden">「氛围转移」的替代方案：选一张喜欢的图，优先读取它内嵌的官方生成参数（NAI 图 100% 精确还原配方）；没有元数据时用本地分析配色/明暗/对比，填了视觉分析模型后还能让 AI 深度解读画风细节。结果一键填入预设，之后每张图都保持这种画风，全程不需要中转站支持参考图。</p>
             <div class="collapsible-body">
               <div class="preset-actions">
                 <button class="mini-btn" id="extractFromCanvasBtn" type="button">从画布当前图提取</button>
                 <button class="mini-btn" id="extractFromFileBtn" type="button">从本地图片提取</button>
                 <button class="mini-btn" id="aiStyleAnalyzeBtn" type="button">AI 深度分析</button>
                 <input type="file" id="styleExtractFileInput" accept="image/*" class="hidden">
+              </div>
+              <div id="styleMetaResult" class="extract-result hidden">
+                <p class="meta-badge">检测到内嵌生成参数 · 官方精确配方</p>
+                <p class="extract-tags" id="styleMetaSummary"></p>
+                <div class="preset-actions">
+                  <button class="mini-btn" id="useMetaAsPresetBtn" type="button">存为画风预设</button>
+                  <button class="mini-btn" id="applyMetaParamsBtn" type="button">还原全部参数到创作页</button>
+                </div>
               </div>
               <div id="styleExtractResult" class="extract-result hidden">
                 <div class="swatch-row" id="styleSwatches"></div>
@@ -456,11 +472,11 @@
 
 <div id="toast" class="toast"></div>
 
-<script src="js/zip.js?v=20261110c"></script>
-<script src="js/db.js?v=20261110c"></script>
-<script src="js/api.js?v=20261110c"></script>
-<script src="js/pngmeta.js?v=20261110c"></script>
-<script src="js/artists.js?v=20261110c"></script>
-<script src="js/app.js?v=20261110c"></script>
+<script src="js/zip.js?v=20261110d"></script>
+<script src="js/db.js?v=20261110d"></script>
+<script src="js/api.js?v=20261110d"></script>
+<script src="js/pngmeta.js?v=20261110d"></script>
+<script src="js/artists.js?v=20261110d"></script>
+<script src="js/app.js?v=20261110d"></script>
 </body>
 </html>

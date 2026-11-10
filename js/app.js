@@ -2163,6 +2163,9 @@ function bindStylePresets() {
   });
   $("saveStylePresetBtn").addEventListener("click", saveStylePresetForm);
   $("cancelStylePresetBtn").addEventListener("click", closeStylePresetForm);
+  $("abTestBtn").addEventListener("click", () =>
+    runAbTest().catch((e) => toast("A/B 验证失败: " + (e.message || e), "error", 6000))
+  );
   renderStylePresets();
 }
 
@@ -2266,6 +2269,7 @@ function analyzeImageStyle(blob) {
   });
 }
 function showStyleExtractResult(res) {
+  $("styleMetaResult").classList.add("hidden");
   const box = $("styleExtractResult");
   $("styleSwatches").innerHTML = res.palette
     .map((hex) => `<span class="swatch" style="background:${hex}" title="${hex}"></span>`)
@@ -2278,10 +2282,49 @@ async function extractStyleFromBlob(blob) {
     toast("没有可分析的图片", "warn");
     return;
   }
+  // 优先读内嵌官方生成参数 (NAI 图 = 100% 精确配方)
+  try {
+    const meta = commentToMeta(await readPngMetadata(blob));
+    if (meta && (meta.prompt || meta.model)) {
+      lastStyleExtract = { tags: [], palette: [], b64: await blobToB64(blob), meta };
+      showMetaExtractResult(meta);
+      return;
+    }
+  } catch (e) { /* 非 PNG 或无参数 → 本地分析兜底 */ }
   toast("正在分析画风…", "ok");
   const res = await analyzeImageStyle(blob);
   lastStyleExtract = res;
   showStyleExtractResult(res);
+}
+function metaSummaryText(meta) {
+  const artists = (meta.prompt || "").match(/artist:[^\s,，]+/gi) || [];
+  const bits = [];
+  if (meta.model) bits.push("模型 " + meta.model);
+  if (meta.steps != null) bits.push("步数 " + meta.steps);
+  if (meta.scale != null) bits.push("Scale " + meta.scale);
+  if (meta.sampler) bits.push(meta.sampler);
+  if (artists.length) bits.push("画师 " + artists.join(" / "));
+  return bits.join(" · ");
+}
+function showMetaExtractResult(meta) {
+  $("styleExtractResult").classList.add("hidden");
+  $("styleMetaSummary").textContent = metaSummaryText(meta);
+  $("styleMetaResult").classList.remove("hidden");
+  toast("检测到内嵌生成参数，官方精确配方可直接使用", "ok", 4500);
+}
+function metaToStylePresetForm(meta) {
+  openStylePresetForm(null);
+  $("spName").value = "配方 " + new Date().toLocaleDateString("zh-CN");
+  $("spArtist").value = ((meta.prompt || "").match(/artist:[^\s,，]+/gi) || []).join(", ");
+  $("spTags").value = "";
+  $("spUc").value = "";
+  $("spModel").value = meta.model || "";
+  $("spSampler").value = meta.sampler || "";
+  $("spSteps").value = meta.steps != null ? meta.steps : "";
+  $("spScale").value = meta.scale != null ? meta.scale : "";
+  $("spCfg").value = meta.cfgRescale != null ? meta.cfgRescale : "";
+  $("spVariety").value = meta.variety != null ? meta.variety : "";
+  toast("官方配方已填入预设表单，保存即用", "ok");
 }
 async function aiStyleAnalyze() {
   if (!lastStyleExtract || !lastStyleExtract.b64) {
@@ -2340,6 +2383,84 @@ function bindStyleExtraction() {
     refreshTagChipStates();
     toast("已填入预设表单，可继续补充画师串后保存", "ok");
   });
+  $("useMetaAsPresetBtn").addEventListener("click", () => {
+    if (lastStyleExtract && lastStyleExtract.meta) metaToStylePresetForm(lastStyleExtract.meta);
+  });
+  $("applyMetaParamsBtn").addEventListener("click", () => {
+    if (!(lastStyleExtract && lastStyleExtract.meta)) return;
+    reuseParams(lastStyleExtract.meta);
+    if (isMobileView()) switchView("create");
+    toast("已从图片还原全部生成参数", "ok");
+  });
+}
+
+/* ---------- A/B preset verification (画风预设 A/B 验证) ---------- */
+
+let abUrls = [];
+function showAbResult(aBlob, bBlob, presetName) {
+  abUrls.forEach((u) => URL.revokeObjectURL(u));
+  abUrls = [URL.createObjectURL(aBlob), URL.createObjectURL(bBlob)];
+  $("abImgA").src = abUrls[0];
+  $("abImgB").src = abUrls[1];
+  $("abPresetName").textContent = presetName;
+  $("abSummary").textContent = "相同 Seed、相同提示词，唯一区别是有没有预设。两张图差多少 = 预设对画风的控制力。";
+  $("abResult").classList.remove("hidden");
+}
+async function runAbTest() {
+  const active = getActiveStylePreset();
+  if (!active) {
+    toast("先启用一个画风预设再验证（点预设名启用）", "warn");
+    return;
+  }
+  if (generating) {
+    toast("正在生成中，请稍后再试", "warn");
+    return;
+  }
+  if (!settings.base) {
+    toast("先在设置里配置中转站", "warn");
+    openSettings();
+    return;
+  }
+  if (!confirm("A/B 验证将连续生成 2 张图（相同 Seed，带/不带预设各一张），消耗 2 张额度。继续？")) return;
+  const savedSeed = params.seed;
+  const savedN = params.n;
+  const savedActive = settings.activeStylePreset;
+  params.seed = (savedSeed !== "" && savedSeed != null && +savedSeed >= 0) ? +savedSeed : Math.floor(Math.random() * 2147483647);
+  $("seedInput").value = params.seed;
+  params.n = 1;
+  saveParams();
+  try {
+    toast(`A/B 验证 Seed=${params.seed}：A（带预设「${active.name}」）生成中…`, "info", 5000);
+    await generate();
+    if (genCancelReason) {
+      toast("A/B 验证已中断", "warn");
+      return;
+    }
+    const aBlob = currentImage && currentImage.blob;
+    settings.activeStylePreset = null;
+    toast("A/B 验证：B（不带预设）生成中…", "info", 5000);
+    await generate();
+    if (genCancelReason) {
+      toast("A/B 验证已中断", "warn");
+      return;
+    }
+    const bBlob = currentImage && currentImage.blob;
+    settings.activeStylePreset = savedActive;
+    if (aBlob && bBlob) {
+      showAbResult(aBlob, bBlob, active.name);
+      toast("A/B 验证完成，两张图差异 = 预设的画风控制力", "ok");
+    } else {
+      toast("A/B 验证未取到图像", "warn");
+    }
+  } finally {
+    settings.activeStylePreset = savedActive;
+    params.seed = savedSeed;
+    params.n = savedN;
+    $("seedInput").value = savedSeed === "" ? "" : savedSeed;
+    saveParams();
+    saveSettings();
+    renderStylePresets();
+  }
 }
 
 function init() {
