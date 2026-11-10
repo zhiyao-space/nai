@@ -38,7 +38,7 @@
       </section>
 
       <section class="card">
-        <div class="card-title">排除内容 (负向提示词) <button class="hint-btn" title="这是什么？">?</button> <button class="mini-btn" id="clearNegativeBtn">清空</button></div>
+        <div class="card-title">排除内容 (负向提示词) <button class="hint-btn" title="这是什么？">?</button> <span class="char-count" id="negativeCount">0</span> <button class="mini-btn" id="clearNegativeBtn">清空</button></div>
         <p class="hint-text hidden">写不想出现在画面里的东西，例如：两个人、文字、水印、模糊。开启「自动排除瑕疵」时留空即可，会自动填入常用排除项。</p>
         <textarea id="negativeInput" rows="3" spellcheck="false" placeholder="不想出现的东西（开启自动排除瑕疵时留空就行）"></textarea>
       </section>
@@ -290,6 +290,7 @@
     <div class="generating-overlay hidden" id="generatingOverlay">
       <div class="spinner"></div>
       <span>正在生成，请稍候…</span>
+      <button class="ghost-btn" id="cancelGenBtn">取消生成</button>
     </div>
   </main>
 
@@ -357,7 +358,12 @@
       </div>
       <div class="field">
         <label>模型 <button class="hint-btn" title="这是什么？">?</button></label>
-        <p class="hint-text hidden">保存设置后自动从中转站拉取模型列表，绘画模型优先分组；列表里没有的模型，直接在下面「自定义模型名」填模型 ID，填了以后优先生效。</p>
+        <p class="hint-text hidden">保存设置后自动从中转站拉取模型列表。模型多时用「搜索模型」输入关键词过滤，或点「只看绘画模型」自动识别筛选出绘画类模型；列表里没有的模型，直接在下面「自定义模型名」填模型 ID，填了以后优先生效。</p>
+        <input type="text" id="apiModelSearch" placeholder="搜索模型名，如 nai / flux / sd" autocomplete="off">
+        <div class="model-filter-row">
+          <button class="mini-btn pill" id="imageModelFilterBtn" type="button">只看绘画模型</button>
+          <span class="model-count" id="apiModelCount"></span>
+        </div>
         <select id="apiModelSelect"></select>
         <input type="text" id="apiModelCustom" placeholder="自定义模型名，填写后优先使用" autocomplete="off" style="margin-top:8px">
       </div>

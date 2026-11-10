@@ -68,8 +68,8 @@ NovelAI 格式的请求体与官方前端逻辑一致, 便于直连或中转:
 纯静态页面, 无需构建:
 
 ```bash
-# 任选一种静态服务器
-python3 -m http.server 8080 --directory novelai-clone
+# 在仓库根目录任选一种静态服务器
+python3 -m http.server 8080
 ```
 
 浏览器打开 `http://localhost:8080` 即可。
@@ -77,10 +77,10 @@ python3 -m http.server 8080 --directory novelai-clone
 ## 目录结构
 
 ```
-novelai-clone/
+.
   index.html      页面结构
   css/style.css   NovelAI 风格主题
-  js/api.js       中转站 API 兼容层 (两种格式 / 参数构建 / 错误处理)
+  js/api.js       中转站 API 兼容层 (两种格式 / 参数构建 / 错误处理 / 超时)
   js/artists.js   Danbooru 画师串源库 (搜索 / 预览 / 离线合集)
   js/zip.js       NovelAI ZIP 响应解压与 PNG 提取
   js/db.js        IndexedDB 历史记录

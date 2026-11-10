@@ -2,6 +2,8 @@ const $ = (id) => document.getElementById(id);
 
 const LS_SETTINGS = "nai_clone_settings";
 const LS_PARAMS = "nai_clone_params";
+const LS_MODELS = "nai_clone_models";
+const GEN_TIMEOUT_MS = 150000;
 
 const SIZE_PRESETS = {
   portrait: { normal: [832, 1216], large: [1024, 1536] },
@@ -59,6 +61,8 @@ let settings = { ...DEFAULT_SETTINGS };
 let params = { ...DEFAULT_PARAMS };
 let generating = false;
 let currentImage = null;
+let genAbort = null;
+let genCancelReason = "";
 const objectUrls = new Map();
 
 let sourceImage = null;
@@ -70,8 +74,18 @@ const VIBE_LIMIT = 5;
 let vibes = [];
 
 let relayModels = [];
+let modelFilterText = "";
+let modelImageOnly = false;
+let modelSearchTimer = null;
 
 /* ---------- persistence ---------- */
+
+function loadCachedModels() {
+  try {
+    const c = JSON.parse(localStorage.getItem(LS_MODELS) || "null");
+    if (Array.isArray(c) && c.length) relayModels = c.filter((x) => typeof x === "string" && x.trim());
+  } catch (e) {}
+}
 
 function loadState() {
   try {
@@ -154,6 +168,7 @@ function bindPrompt() {
   $("qualityToggle").checked = params.qualityOn;
   $("ucpToggle").checked = params.ucpOn;
   updatePromptCount();
+  updateNegativeCount();
   updateNegativePlaceholder();
 
   $("promptInput").addEventListener("input", () => {
@@ -163,6 +178,7 @@ function bindPrompt() {
   });
   $("negativeInput").addEventListener("input", () => {
     params.negative = $("negativeInput").value;
+    updateNegativeCount();
     saveParams();
   });
   $("qualityToggle").addEventListener("change", () => {
@@ -177,12 +193,17 @@ function bindPrompt() {
   $("clearNegativeBtn").addEventListener("click", () => {
     $("negativeInput").value = "";
     params.negative = "";
+    updateNegativeCount();
     saveParams();
   });
 }
 
 function updatePromptCount() {
   $("promptCount").textContent = String($("promptInput").value.length);
+}
+
+function updateNegativeCount() {
+  $("negativeCount").textContent = String($("negativeInput").value.length);
 }
 
 function updateNegativePlaceholder() {
@@ -246,9 +267,13 @@ async function refreshRelayModels(opts = {}) {
   try {
     const ids = await fetchModelList(cfg);
     relayModels = ids;
+    try { localStorage.setItem(LS_MODELS, JSON.stringify(ids)); } catch (e) {}
     buildModelSelect();
     if (!$("settingsModal").classList.contains("hidden")) fillApiModelSelect();
-    if (!opts.silent) toast(`已拉取 ${ids.length} 个中转站模型`, "ok");
+    if (!opts.silent) {
+      const imgCount = ids.filter(looksLikeImageModel).length;
+      toast(imgCount ? `已拉取 ${ids.length} 个模型，自动识别出 ${imgCount} 个绘画模型` : `已拉取 ${ids.length} 个中转站模型`, "ok");
+    }
   } catch (e) {
     if (!opts.silent) toast("拉取模型列表失败: " + (e.message || e), "error", 5000);
   }
@@ -343,6 +368,10 @@ function bindSizeControls() {
   for (const btn of presetEl.querySelectorAll("button")) {
     btn.classList.toggle("active", btn.dataset.preset === params.sizePreset);
     btn.addEventListener("click", () => {
+      if (dimLocked()) {
+        toast("照图改 / 局部重绘时尺寸跟随源图，请先移除源图或切回「凭空画」", "warn");
+        return;
+      }
       params.sizePreset = btn.dataset.preset;
       for (const b of presetEl.querySelectorAll("button")) {
         b.classList.toggle("active", b === btn);
@@ -353,6 +382,11 @@ function bindSizeControls() {
   }
 
   $("largeToggle").addEventListener("change", () => {
+    if (dimLocked()) {
+      toast("照图改 / 局部重绘时尺寸跟随源图，请先移除源图或切回「凭空画」", "warn");
+      $("largeToggle").checked = params.large;
+      return;
+    }
     params.large = $("largeToggle").checked;
     applySizePreset();
     saveParams();
@@ -490,7 +524,19 @@ function updateActionPanels() {
   }
   $("noisePanel").classList.toggle("hidden", !i2i);
   $("maskPanel").classList.toggle("hidden", !inpaint);
+  updateDimLock();
   if (inpaint && sourceImage) initMaskCanvas();
+}
+
+function dimLocked() {
+  return currentAction() !== "generate" && !!sourceImage;
+}
+
+function updateDimLock() {
+  const locked = dimLocked();
+  $("widthInput").disabled = locked;
+  $("heightInput").disabled = locked;
+  $("swapSizeBtn").disabled = locked;
 }
 
 function bindImageUpload() {
@@ -529,6 +575,7 @@ function bindImageUpload() {
     $("uploadEmpty").classList.remove("hidden");
     $("sourcePreviewImg").removeAttribute("src");
     $("maskBaseImg").classList.add("hidden");
+    updateDimLock();
     initMaskCanvas();
     toast("已移除源图", "ok");
   });
@@ -551,35 +598,64 @@ function bindImageUpload() {
 
 function loadSourceFile(file) {
   const reader = new FileReader();
-  reader.onload = () => {
-    const dataUrl = String(reader.result);
-    const img = new Image();
-    img.onload = () => {
+  reader.onload = async () => {
+    try {
+      const scaled = await downscaleToMax(String(reader.result), 1536);
       sourceImage = {
-        b64: dataUrl.split(",")[1] || "",
-        dataUrl,
-        w: img.naturalWidth,
-        h: img.naturalHeight
+        b64: scaled.dataUrl.split(",")[1] || "",
+        dataUrl: scaled.dataUrl,
+        w: scaled.w,
+        h: scaled.h
       };
       maskStrokes = [];
-      $("sourcePreviewImg").src = dataUrl;
-      $("maskBaseImg").src = dataUrl;
+      $("sourcePreviewImg").src = scaled.dataUrl;
+      $("maskBaseImg").src = scaled.dataUrl;
       $("maskBaseImg").classList.remove("hidden");
       $("uploadPreview").classList.remove("hidden");
       $("uploadEmpty").classList.add("hidden");
-      params.width = Math.min(3072, Math.max(64, Math.round(img.naturalWidth / 64) * 64));
-      params.height = Math.min(3072, Math.max(64, Math.round(img.naturalHeight / 64) * 64));
-      $("widthInput").value = params.width;
-      $("heightInput").value = params.height;
+      params.width = scaled.w;
+      params.height = scaled.h;
+      $("widthInput").value = scaled.w;
+      $("heightInput").value = scaled.h;
       updateDimShow();
+      updateDimLock();
       saveParams();
       initMaskCanvas();
-      toast(`源图已加载 ${img.naturalWidth}x${img.naturalHeight}，尺寸已同步`, "ok");
-    };
-    img.onerror = () => toast("图片读取失败", "error");
-    img.src = dataUrl;
+      toast(`源图已加载 ${scaled.w}x${scaled.h}，尺寸已同步（大图已自动压缩）`, "ok");
+    } catch (e) {
+      toast("图片读取失败", "error");
+    }
   };
+  reader.onerror = () => toast("图片读取失败", "error");
   reader.readAsDataURL(file);
+}
+
+function fitDims64(w, h, maxSide) {
+  const scale = Math.min(1, maxSide / Math.max(w, h));
+  return {
+    w: Math.max(64, Math.round((w * scale) / 64) * 64),
+    h: Math.max(64, Math.round((h * scale) / 64) * 64)
+  };
+}
+
+function downscaleToMax(dataUrl, maxSide) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const t = fitDims64(img.naturalWidth, img.naturalHeight, maxSide);
+      if (t.w === img.naturalWidth && t.h === img.naturalHeight) {
+        resolve({ dataUrl, w: t.w, h: t.h });
+        return;
+      }
+      const off = document.createElement("canvas");
+      off.width = t.w;
+      off.height = t.h;
+      off.getContext("2d").drawImage(img, 0, 0, t.w, t.h);
+      resolve({ dataUrl: off.toDataURL("image/png"), w: t.w, h: t.h });
+    };
+    img.onerror = () => reject(new Error("图片解码失败"));
+    img.src = dataUrl;
+  });
 }
 
 function initMaskCanvas() {
@@ -815,21 +891,20 @@ function addVibeFiles(files) {
   };
   for (const file of list) {
     const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = String(reader.result);
-      const img = new Image();
-      img.onload = () => {
+    reader.onload = async () => {
+      try {
+        const scaled = await downscaleToMax(String(reader.result), 1024);
         vibes.push({
           id: crypto.randomUUID(),
-          b64: dataUrl.split(",")[1] || "",
-          dataUrl,
+          b64: scaled.dataUrl.split(",")[1] || "",
+          dataUrl: scaled.dataUrl,
           infoExtracted: 1,
           referenceStrength: 0.6
         });
-        done();
-      };
-      img.onerror = () => { toast("图片读取失败", "error"); done(); };
-      img.src = dataUrl;
+      } catch (e) {
+        toast("图片读取失败", "error");
+      }
+      done();
     };
     reader.onerror = () => { toast("图片读取失败", "error"); done(); };
     reader.readAsDataURL(file);
@@ -1474,16 +1549,21 @@ async function generate() {
   saveSettings();
   setGenerating(true);
   if (isMobileView()) switchView("canvas");
+  genAbort = new AbortController();
+  genCancelReason = "";
+  let timeoutTimer = setTimeout(() => cancelGeneration("timeout"), GEN_TIMEOUT_MS);
   try {
     let blobs = [];
     if (settings.format === "openai" && p.n > 1) {
       for (let i = 0; i < p.n; i++) {
         const pi = { ...p, seed: p.seed + i, n: 1 };
-        const part = await generate(settings, pi);
+        const part = await requestGeneration(settings, pi, genAbort.signal);
         blobs.push(...part.slice(0, 1));
+        clearTimeout(timeoutTimer);
+        timeoutTimer = setTimeout(() => cancelGeneration("timeout"), GEN_TIMEOUT_MS);
       }
     } else {
-      blobs = await generate(settings, p);
+      blobs = await requestGeneration(settings, p, genAbort.signal);
     }
     const now = Date.now();
     for (let i = 0; i < blobs.length; i++) {
@@ -1495,11 +1575,23 @@ async function generate() {
     }
     toast(`生成完成，共 ${blobs.length} 张图像`, "ok");
   } catch (e) {
-    console.error(e);
-    toast("生成失败: " + (e.message || e), "error", 6500);
+    if (genAbort && genAbort.signal.aborted) {
+      toast(genCancelReason === "timeout" ? "生成超时，已自动取消（中转站长时间无响应）" : "已取消本次生成", "warn");
+    } else {
+      console.error(e);
+      toast("生成失败: " + (e.message || e), "error", 6500);
+    }
   } finally {
+    clearTimeout(timeoutTimer);
+    genAbort = null;
     setGenerating(false);
   }
+}
+
+function cancelGeneration(reason) {
+  if (!genAbort) return;
+  genCancelReason = reason;
+  genAbort.abort();
 }
 
 function prependHistoryItem(rec) {
@@ -1515,6 +1607,10 @@ function prependHistoryItem(rec) {
 /* ---------- settings modal ---------- */
 
 function openSettings() {
+  modelFilterText = "";
+  modelImageOnly = false;
+  $("apiModelSearch").value = "";
+  $("imageModelFilterBtn").classList.remove("active");
   $("apiBase").value = settings.base;
   $("apiKey").value = settings.key;
   $("apiFormat").value = settings.format;
@@ -1529,12 +1625,19 @@ function closeSettings() {
   $("settingsModal").classList.add("hidden");
 }
 
+function filteredRelayModels() {
+  let list = relayModels;
+  if (modelImageOnly) list = list.filter(looksLikeImageModel);
+  const q = modelFilterText.toLowerCase();
+  if (q) list = list.filter((id) => id.toLowerCase().includes(q));
+  return list;
+}
+
 function fillApiModelSelect() {
   const sel = $("apiModelSelect");
   sel.innerHTML = "";
-  if (relayModels.length) {
-    fillModelGroups(sel);
-  } else {
+  const current = settings.model;
+  if (!relayModels.length) {
     const og = document.createElement("optgroup");
     og.label = "中转站模型";
     const opt = document.createElement("option");
@@ -1542,15 +1645,39 @@ function fillApiModelSelect() {
     opt.textContent = "保存设置后自动拉取模型列表";
     og.appendChild(opt);
     sel.appendChild(og);
+  } else {
+    const list = filteredRelayModels();
+    if (!list.length) {
+      const og = document.createElement("optgroup");
+      og.label = "搜索结果";
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.disabled = true;
+      opt.textContent = "没有匹配的模型，换个关键词试试";
+      og.appendChild(opt);
+      sel.appendChild(og);
+    } else if (modelFilterText || modelImageOnly) {
+      const og = document.createElement("optgroup");
+      og.label = `匹配结果 (${list.length})`;
+      appendModelOptions(og, list);
+      sel.appendChild(og);
+    } else {
+      fillModelGroups(sel);
+    }
   }
-  const current = settings.model;
   if (current && !sel.querySelector(`option[value="${CSS.escape(current)}"]`)) {
     const opt = document.createElement("option");
     opt.value = current;
     opt.textContent = `当前: ${current}`;
     sel.insertBefore(opt, sel.firstChild);
   }
-  sel.value = current;
+  if (current) sel.value = current;
+  const count = $("apiModelCount");
+  if (count) {
+    count.textContent = relayModels.length
+      ? `共 ${relayModels.length} 个${modelFilterText || modelImageOnly ? `，匹配 ${filteredRelayModels().length} 个` : ""}`
+      : "";
+  }
 }
 
 function bindSettingsModal() {
@@ -1589,6 +1716,18 @@ function bindSettingsModal() {
     btn.disabled = false;
     btn.textContent = "重新拉取模型列表";
   });
+  $("apiModelSearch").addEventListener("input", () => {
+    clearTimeout(modelSearchTimer);
+    modelSearchTimer = setTimeout(() => {
+      modelFilterText = $("apiModelSearch").value.trim();
+      fillApiModelSelect();
+    }, 150);
+  });
+  $("imageModelFilterBtn").addEventListener("click", () => {
+    modelImageOnly = !modelImageOnly;
+    $("imageModelFilterBtn").classList.toggle("active", modelImageOnly);
+    fillApiModelSelect();
+  });
 }
 
 function bindHints() {
@@ -1613,6 +1752,7 @@ function bindCanvasActions() {
     if (currentImage) downloadImage(currentImage);
   });
   $("generateBtn").addEventListener("click", generate);
+  $("cancelGenBtn").addEventListener("click", () => cancelGeneration("user"));
   document.addEventListener("keydown", (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
       e.preventDefault();
@@ -1649,6 +1789,7 @@ function bindClearHistory() {
 
 function init() {
   loadState();
+  loadCachedModels();
   buildModelSelect();
   bindBottomNav();
   bindPrompt();
