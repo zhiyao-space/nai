@@ -46,32 +46,111 @@ function buildTextChunk(keyword, text) {
   return out;
 }
 
+/* meta -> 官方 Comment JSON。字段结构与官方生成图逐项对齐:
+ * V3: params_version=2, 角色不写入 (官方 V3 无角色提示词)
+ * V4: params_version=3, v4=true, 角色走 v4_prompt/v4_negative_prompt.char_captions
+ * 模型名写进 tEXt "Source" 块 (官方同位置放模型指纹), Comment 内另存 model 便于本站往返。
+ */
+function isV4Family(model) {
+  return /nai-diffusion-4/.test(model || "");
+}
+
 function metaToComment(m) {
-  return {
+  const isV4 = isV4Family(m.model);
+  const comment = {
     prompt: m.prompt || "",
     steps: m.steps,
     height: m.h,
     width: m.w,
     scale: m.scale,
-    seed: m.seed,
-    sampler: m.sampler,
     uc: m.negative || "",
+    sampler: m.sampler,
+    seed: m.seed,
     noise_schedule: m.noiseSchedule,
     cfg_rescale: m.cfgRescale,
-    qualityToggle: !!m.qualityOn,
-    ucPreset: m.ucpOn ? 0 : 1,
-    action: m.action || "generate",
+    skip_cfg_above_sigma: null,
+    smea: false,
+    smea_dyn: false,
+    dynamic_thresholding: false,
+    controlnet_strength: 1,
+    legacy: false,
+    legacy_v3_extend: false,
+    add_original_image: m.action !== "generate",
+    uncond_scale: 1,
     strength: m.strength,
     noise: m.noise,
-    characters: m.characters || [],
-    use_coords: !!m.useCoords,
-    use_order: !!m.useOrder,
+    image: "",
+    mask: "",
+    extra_noise_seed: m.seed,
+    variations: [],
+    reference_image_multiple: [],
+    reference_information_extracted_multiple: [],
+    reference_strength_multiple: [],
+    use_reference_image: false,
+    ucPreset: m.ucpOn ? 0 : 1,
+    qualityToggle: !!m.qualityOn,
+    params_version: isV4 ? 3 : 2,
+    action: m.action || "generate",
     model: m.model
   };
+  if (isV4) {
+    const chars = m.characters || [];
+    comment.deliberate_euler_ancestral_bug = false;
+    comment.prefer_brownian = true;
+    comment.legacy_uc = false;
+    comment.v4 = true;
+    comment.v4_prompt = {
+      caption: {
+        base_caption: m.prompt || "",
+        char_captions: chars.map((c) => ({
+          char_caption: c.prompt || "",
+          centers: [{ x: c.x ?? 0.5, y: c.y ?? 0.5 }]
+        }))
+      },
+      use_coords: !!m.useCoords,
+      use_order: m.useOrder !== false
+    };
+    comment.v4_negative_prompt = {
+      caption: {
+        base_caption: m.negative || "",
+        char_captions: chars
+          .filter((c) => c.negative)
+          .map((c) => ({
+            char_caption: c.negative,
+            centers: [{ x: c.x ?? 0.5, y: c.y ?? 0.5 }]
+          }))
+      },
+      legacy_uc: false
+    };
+  }
+  return comment;
 }
 
+/* 官方 Comment JSON -> 本站 meta。兼容三类来源:
+ * 1. 本站生成 (有 model 键)  2. 官方 V4 图 (v4_prompt 结构, 模型从 Source 推断)
+ * 3. 官方 V3 图 (Source 含 XL)
+ */
 function commentToMeta(c) {
   if (!c || typeof c !== "object" || (!c.prompt && !c.width)) return null;
+  const chars = [];
+  const v4p = c.v4_prompt && c.v4_prompt.caption;
+  if (v4p && Array.isArray(v4p.char_captions)) {
+    const negCaps = (c.v4_negative_prompt && c.v4_negative_prompt.caption
+      && c.v4_negative_prompt.caption.char_captions) || [];
+    v4p.char_captions.forEach((cc, i) => {
+      const center = (cc.centers && cc.centers[0]) || {};
+      chars.push({
+        prompt: cc.char_caption || "",
+        negative: (negCaps[i] && negCaps[i].char_caption) || "",
+        x: center.x ?? 0.5,
+        y: center.y ?? 0.5
+      });
+    });
+  }
+  let action = c.action || "generate";
+  if (action === "generate" && c.mask) action = "inpaint";
+  else if (action === "generate" && c.image) action = "img2img";
+  const source = c.__source || "";
   return {
     prompt: c.prompt ?? "",
     negative: c.uc ?? "",
@@ -85,13 +164,14 @@ function commentToMeta(c) {
     seed: c.seed,
     qualityOn: !!c.qualityToggle,
     ucpOn: c.ucPreset === 0,
-    action: c.action || "generate",
+    action,
     strength: c.strength,
     noise: c.noise,
-    characters: Array.isArray(c.characters) ? c.characters : [],
-    useCoords: !!c.use_coords,
-    useOrder: !!c.use_order,
-    model: c.model
+    characters: chars,
+    useCoords: !!(c.v4_prompt && c.v4_prompt.use_coords),
+    useOrder: c.v4_prompt ? c.v4_prompt.use_order !== false : false,
+    model: c.model || (c.v4 ? "nai-diffusion-4-5-full"
+      : /XL/i.test(source) ? "nai-diffusion-3" : undefined)
   };
 }
 
@@ -106,6 +186,7 @@ async function embedPngMetadata(blob, meta) {
   const chunks = [
     buildTextChunk("Software", "NovelAI"),
     buildTextChunk("Title", "AI generated image"),
+    buildTextChunk("Source", meta.model || "NovelAI"),
     buildTextChunk("Description", meta.prompt || ""),
     buildTextChunk("Comment", JSON.stringify(metaToComment(meta)))
   ];
@@ -158,7 +239,9 @@ async function readPngMetadata(blob) {
   }
   if (!texts.Comment) return null;
   try {
-    return JSON.parse(texts.Comment);
+    const parsed = JSON.parse(texts.Comment);
+    if (parsed && typeof parsed === "object") parsed.__source = texts.Source || "";
+    return parsed;
   } catch (e) {
     return null;
   }
