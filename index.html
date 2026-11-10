@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NovelAI 图像生成</title>
-<link rel="stylesheet" href="css/style.css?v=20261110e">
+<link rel="stylesheet" href="css/style.css?v=20261110f">
 </head>
 <body>
 
@@ -457,11 +457,10 @@
         <input type="text" id="artistBase" placeholder="https://danbooru.donmai.us" autocomplete="off">
       </div>
       <div class="field">
-        <label>视觉分析 API（独立配置）<button class="hint-btn" title="这是什么？">?</button></label>
-        <p class="hint-text hidden">用于画风提取的「AI 深度分析」，与绘画中转站互相独立，可填任意 OpenAI 格式服务。三项都留空则自动回落到绘画中转站的地址和密钥。模型填多模态聊天模型，如 gpt-4o-mini、gemini-2.5-flash、claude 系列。</p>
-        <input type="text" id="visionBase" placeholder="API 地址，如 https://api.xxx.com（留空用绘画中转站）" autocomplete="off" style="margin-bottom:8px">
-        <input type="password" id="visionKey" placeholder="API 密钥（留空用绘画中转站的密钥）" autocomplete="off" style="margin-bottom:8px">
-        <input type="text" id="visionModel" placeholder="模型名，如 gpt-4o-mini，留空不启用" autocomplete="off">
+        <label>视觉分析模型 (可选) <button class="hint-btn" title="这是什么？">?</button></label>
+        <p class="hint-text hidden">用于画风提取的「AI 深度分析」，与绘画模型走同一个中转站地址和密钥，只是模型不同。可搜索并选择多模态聊天模型，如 gpt-4o-mini、gemini-2.5-flash、claude 系列。留空则只用本地分析（配色/对比/明暗/细节密度），不影响生成。</p>
+        <input type="text" id="visionModelSearch" placeholder="搜索模型名，如 gpt / gemini / claude" autocomplete="off" style="margin-bottom:8px">
+        <select id="visionModelSelect"></select>
       </div>
       <button class="ghost-btn" id="fetchModelsBtn">重新拉取模型列表</button>
     </div>
@@ -474,11 +473,11 @@
 
 <div id="toast" class="toast"></div>
 
-<script src="js/zip.js?v=20261110e"></script>
-<script src="js/db.js?v=20261110e"></script>
-<script src="js/api.js?v=20261110e"></script>
-<script src="js/pngmeta.js?v=20261110e"></script>
-<script src="js/artists.js?v=20261110e"></script>
-<script src="js/app.js?v=20261110e"></script>
+<script src="js/zip.js?v=20261110f"></script>
+<script src="js/db.js?v=20261110f"></script>
+<script src="js/api.js?v=20261110f"></script>
+<script src="js/pngmeta.js?v=20261110f"></script>
+<script src="js/artists.js?v=20261110f"></script>
+<script src="js/app.js?v=20261110f"></script>
 </body>
 </html>
