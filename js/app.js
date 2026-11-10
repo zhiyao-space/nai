@@ -976,7 +976,7 @@ function updateVibeHints() {
   const hint = $("vibeHint");
   const msgs = [];
   if (settings.format === "openai" && vibes.length) {
-    msgs.push("当前为 OpenAI 兼容格式，氛围转移将被忽略；请切换为 NovelAI 官方格式");
+    msgs.push("当前为 OpenAI 兼容格式：生成时自动尝试官方 NAI 通道，不支持则忽略氛围图");
   }
   if (familyOf() === 3 && vibes.length > 1) {
     msgs.push("V3 模型仅支持 1 张氛围图，生成时只使用第 1 张");
@@ -1568,25 +1568,38 @@ async function generate() {
     toast("请先输入提示词 (Prompt) 或角色提示词", "warn");
     return;
   }
-  if (settings.format === "openai" && p.vibes.length) {
-    toast("氛围转移仅支持 NovelAI 官方格式，本次已忽略氛围图", "warn", 5000);
-  }
   saveSettings();
   setGenerating(true);
   if (isMobileView()) switchView("canvas");
   genAbort = new AbortController();
   genCancelReason = "";
   let timeoutTimer = setTimeout(() => cancelGeneration("timeout"), GEN_TIMEOUT_MS);
+  const runBatch = async (cfg) => {
+    const out = [];
+    for (let i = 0; i < p.n; i++) {
+      const part = await requestGeneration(cfg, { ...p, seed: p.seed + i, n: 1 }, genAbort.signal);
+      out.push(...part.slice(0, 1));
+      clearTimeout(timeoutTimer);
+      timeoutTimer = setTimeout(() => cancelGeneration("timeout"), GEN_TIMEOUT_MS);
+    }
+    return out;
+  };
   try {
     let blobs = [];
-    if (settings.format === "openai" && p.n > 1) {
-      for (let i = 0; i < p.n; i++) {
-        const pi = { ...p, seed: p.seed + i, n: 1 };
-        const part = await requestGeneration(settings, pi, genAbort.signal);
-        blobs.push(...part.slice(0, 1));
-        clearTimeout(timeoutTimer);
-        timeoutTimer = setTimeout(() => cancelGeneration("timeout"), GEN_TIMEOUT_MS);
+    if (settings.format === "openai" && p.vibes.length) {
+      // OpenAI 协议没有氛围字段: 先试官方 NAI 通道让氛围图生效, 不可用再回退
+      toast("检测到氛围图：正在尝试中转站的官方 NAI 通道…", "info", 4000);
+      try {
+        blobs = p.n > 1 ? await runBatch({ ...settings, format: "nai" }) : await requestGeneration({ ...settings, format: "nai" }, p, genAbort.signal);
+        toast("已通过官方 NAI 通道生成，氛围转移生效", "ok", 4000);
+      } catch (e2) {
+        if (genAbort.signal.aborted) throw e2;
+        console.warn("官方 NAI 通道不可用，回退 OpenAI 格式:", e2);
+        toast("中转站无官方 NAI 通道，已回退 OpenAI 格式（氛围图本次忽略）", "warn", 5000);
+        blobs = p.n > 1 ? await runBatch(settings) : await requestGeneration(settings, p, genAbort.signal);
       }
+    } else if (settings.format === "openai" && p.n > 1) {
+      blobs = await runBatch(settings);
     } else {
       blobs = await requestGeneration(settings, p, genAbort.signal);
     }
