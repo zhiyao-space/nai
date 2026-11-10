@@ -177,6 +177,7 @@ body {
 }
 
 .char-count { margin-left: auto; font-size: 11px; color: var(--text-faint); font-weight: 400; }
+#importMetaBtn { margin-left: 8px; }
 
 .collapsible .card-title.clickable { cursor: pointer; user-select: none; }
 .collapsible .chevron { margin-left: auto; transition: transform 0.2s; color: var(--text-dim); }

@@ -1530,13 +1530,22 @@ async function generate() {
     return;
   }
   const model = effectiveModel();
-  if (action === "inpaint" && modelFamily(model) === 3 && model !== "nai-diffusion-3-inpainting") {
-    params.model = "nai-diffusion-3-inpainting";
-    settings.model = params.model;
-    settings.customModel = "";
-    saveSettings();
-    updateModelSelectView();
-    toast("V3 局部重绘需要 Inpainting 模型，已自动切换", "warn");
+  if (action === "inpaint") {
+    if (modelFamily(model) === 3 && model !== "nai-diffusion-3-inpainting") {
+      params.model = "nai-diffusion-3-inpainting";
+      settings.model = params.model;
+      settings.customModel = "";
+      saveSettings();
+      updateModelSelectView();
+      toast("V3 局部重绘需要 Inpainting 模型，已自动切换", "warn");
+    } else if (isV45(model) && !model.includes("inpainting")) {
+      params.model = "nai-diffusion-4-5-inpainting";
+      settings.model = params.model;
+      settings.customModel = "";
+      saveSettings();
+      updateModelSelectView();
+      toast("已自动切换为 V4.5 Inpainting 重绘模型", "warn");
+    }
   }
   const p = collectParams();
   if (!p.prompt.trim() && !p.characters.some((c) => c.prompt.trim())) {
@@ -1568,7 +1577,9 @@ async function generate() {
     const now = Date.now();
     for (let i = 0; i < blobs.length; i++) {
       const meta = { ...buildMeta(p), seed: p.seed + i };
-      const rec = { id: crypto.randomUUID(), ts: now + i, blob: blobs[i], meta };
+      let blob = blobs[i];
+      try { blob = await embedPngMetadata(blob, meta); } catch (e) {}
+      const rec = { id: crypto.randomUUID(), ts: now + i, blob, meta };
       await dbAdd(rec);
       prependHistoryItem(rec);
       showImage(rec);
@@ -1602,6 +1613,31 @@ function prependHistoryItem(rec) {
   const count = grid.querySelectorAll(".history-item").length;
   $("historyCount").textContent = `(${count})`;
   updateNavHistoryCount();
+}
+
+/* ---------- meta import ---------- */
+
+function bindMetaImport() {
+  const input = $("metaFileInput");
+  $("importMetaBtn").addEventListener("click", () => input.click());
+  input.addEventListener("change", async () => {
+    const file = input.files && input.files[0];
+    input.value = "";
+    if (!file) return;
+    try {
+      const meta = commentToMeta(await readPngMetadata(file));
+      if (!meta) {
+        toast("这张图片没有内嵌生成参数", "warn");
+        return;
+      }
+      reuseParams(meta);
+      showImage({ id: "import-" + Date.now(), ts: Date.now(), blob: file, meta });
+      if (isMobileView()) switchView("canvas");
+      toast("已从图片导入生成参数", "ok");
+    } catch (e) {
+      toast("读取图片失败: " + (e.message || e), "error");
+    }
+  });
 }
 
 /* ---------- settings modal ---------- */
@@ -1806,6 +1842,7 @@ function init() {
   bindCanvasActions();
   bindCollapsibles();
   bindClearHistory();
+  bindMetaImport();
   bindSettingsModal();
   bindHints();
   bindModelSelectChange();

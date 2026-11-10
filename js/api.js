@@ -1,6 +1,7 @@
 const NAI_MODELS = [
   { id: "nai-diffusion-4-5-curated", name: "NAI Diffusion V4.5 Curated", family: 4 },
   { id: "nai-diffusion-4-5-full", name: "NAI Diffusion V4.5 Full", family: 4 },
+  { id: "nai-diffusion-4-5-inpainting", name: "NAI Diffusion V4.5 Inpainting", family: 4 },
   { id: "nai-diffusion-4-full", name: "NAI Diffusion V4 Full", family: 4 },
   { id: "nai-diffusion-4-curated-preview", name: "NAI Diffusion V4 Curated (Preview)", family: 4 },
   { id: "nai-diffusion-3", name: "NAI Diffusion V3", family: 3 },

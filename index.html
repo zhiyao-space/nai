@@ -27,9 +27,10 @@
     <div class="panel-scroll">
 
       <section class="card">
-        <div class="card-title">画面描述 (提示词) <button class="hint-btn" title="这是什么？">?</button> <span class="char-count" id="promptCount">0</span></div>
+        <div class="card-title">画面描述 (提示词) <button class="hint-btn" title="这是什么？">?</button> <span class="char-count" id="promptCount">0</span> <button class="mini-btn" id="importMetaBtn" title="选择一张 NovelAI 或本站生成的 PNG，自动读取内嵌参数并复用">导入参数</button></div>
         <p class="hint-text hidden">用文字描述想画的内容：人物、动作、服装、背景、画风都可以写。写得越具体，画面越贴近预期。</p>
         <textarea id="promptInput" rows="5" spellcheck="false" placeholder="描述你想画的画面，如：银发少女，教室窗边，夕阳，动漫风"></textarea>
+        <input type="file" id="metaFileInput" accept="image/png" class="hidden">
         <div class="toggle-row">
           <label class="switch"><input type="checkbox" id="qualityToggle" checked><span class="slider"></span><span class="switch-label">自动画质词 <button class="hint-btn" title="这是什么？">?</button></span></label>
           <label class="switch"><input type="checkbox" id="ucpToggle" checked><span class="slider"></span><span class="switch-label">自动排除瑕疵 <button class="hint-btn" title="这是什么？">?</button></span></label>
@@ -386,6 +387,7 @@
 <script src="js/zip.js"></script>
 <script src="js/db.js"></script>
 <script src="js/api.js"></script>
+<script src="js/pngmeta.js"></script>
 <script src="js/artists.js"></script>
 <script src="js/app.js"></script>
 </body>
