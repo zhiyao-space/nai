@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NovelAI 图像生成</title>
-<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/style.css?v=20261110a">
 </head>
 <body>
 
@@ -80,7 +80,13 @@
           <div id="stylePresetForm" class="preset-form hidden">
             <input type="text" id="spName" placeholder="预设名称，如：清新水彩">
             <textarea id="spArtist" rows="2" spellcheck="false" placeholder="画师串，如 artist:wlop, artist:miv4t（V4.5 推荐 artist: 前缀）"></textarea>
+            <div class="artist-weight-row">
+              <span class="tag-group-label">画师串权重</span>
+              <button class="mini-btn" id="spArtistUp" type="button">{ } 加权</button>
+              <button class="mini-btn" id="spArtistDown" type="button">[ ] 减权</button>
+            </div>
             <textarea id="spTags" rows="2" spellcheck="false" placeholder="风格标签（可选），如 flat color, soft lighting, watercolor"></textarea>
+            <div class="style-tag-picker" id="spTagPicker"></div>
             <input type="text" id="spUc" placeholder="额外负向词（可选），如 bad hands, extra digits">
             <div class="preset-param-grid">
               <input type="text" id="spModel" placeholder="模型名（留空跟随）">
@@ -425,11 +431,11 @@
 
 <div id="toast" class="toast"></div>
 
-<script src="js/zip.js"></script>
-<script src="js/db.js"></script>
-<script src="js/api.js"></script>
-<script src="js/pngmeta.js"></script>
-<script src="js/artists.js"></script>
-<script src="js/app.js"></script>
+<script src="js/zip.js?v=20261110a"></script>
+<script src="js/db.js?v=20261110a"></script>
+<script src="js/api.js?v=20261110a"></script>
+<script src="js/pngmeta.js?v=20261110a"></script>
+<script src="js/artists.js?v=20261110a"></script>
+<script src="js/app.js?v=20261110b"></script>
 </body>
 </html>

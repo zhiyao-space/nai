@@ -1988,6 +1988,7 @@ function openStylePresetForm(sp) {
   $("spScale").value = pv.scale ?? "";
   $("spCfg").value = pv.cfgRescale ?? "";
   $("spVariety").value = pv.variety ?? "";
+  refreshTagChipStates();
   $("stylePresetForm").classList.remove("hidden");
   $("spName").focus();
 }
@@ -2078,8 +2079,73 @@ function importStylePresets(file) {
   };
   reader.readAsText(file);
 }
+/* ---------- style tag picker (画风标签细化) ---------- */
+
+const STYLE_TAG_GROUPS = [
+  { label: "线条笔触", tags: ["thick lineart", "thin lineart", "clean lineart", "sketch", "rough sketch", "crosshatching", "painterly brushwork", "no lineart"] },
+  { label: "上色方式", tags: ["flat color", "cel shading", "soft shading", "gradient shading", "watercolor (medium)", "digital painting", "impasto", "airbrushed"] },
+  { label: "光影", tags: ["soft lighting", "dramatic lighting", "backlighting", "rim lighting", "dappled sunlight", "cinematic lighting", "golden hour", "studio lighting"] },
+  { label: "配色", tags: ["muted colors", "vibrant colors", "pastel colors", "limited palette", "monochrome", "dark palette", "high contrast", "low contrast"] },
+  { label: "质感氛围", tags: ["film grain", "matte texture", "glossy", "dreamy atmosphere", "ethereal", "gritty", "retro artstyle", "vintage"] },
+  { label: "构图景深", tags: ["close-up", "dynamic angle", "depth of field", "blurry background", "wide shot", "from above", "dutch angle", "portrait view"] }
+];
+
+function toggleTagInTextarea(ta, tag) {
+  const parts = ta.value.split(",").map((s) => s.trim()).filter(Boolean);
+  const i = parts.indexOf(tag);
+  if (i >= 0) parts.splice(i, 1);
+  else parts.push(tag);
+  ta.value = parts.join(", ");
+  refreshTagChipStates();
+}
+function refreshTagChipStates() {
+  const parts = $("spTags").value.split(",").map((s) => s.trim());
+  document.querySelectorAll("#spTagPicker .tag-chip").forEach((c) => {
+    c.classList.toggle("on", parts.includes(c.textContent));
+  });
+}
+function buildStyleTagPicker() {
+  const box = $("spTagPicker");
+  box.innerHTML = "";
+  STYLE_TAG_GROUPS.forEach((g) => {
+    const row = document.createElement("div");
+    row.className = "tag-group";
+    const lbl = document.createElement("span");
+    lbl.className = "tag-group-label";
+    lbl.textContent = g.label;
+    const chips = document.createElement("div");
+    chips.className = "tag-chips";
+    g.tags.forEach((t) => {
+      const c = document.createElement("button");
+      c.type = "button";
+      c.className = "tag-chip";
+      c.textContent = t;
+      c.addEventListener("click", () => toggleTagInTextarea($("spTags"), t));
+      chips.appendChild(c);
+    });
+    row.append(lbl, chips);
+    box.appendChild(row);
+  });
+}
+function wrapArtist(left, right) {
+  const ta = $("spArtist");
+  const cur = ta.value.trim();
+  if (!cur) {
+    toast("先填画师串再加权", "warn");
+    return;
+  }
+  if (cur.startsWith(left) && cur.endsWith(right)) {
+    toast("已经包裹过了，再点一次会叠加权重", "warn");
+    return;
+  }
+  ta.value = left + cur + right;
+}
+
 function bindStylePresets() {
   loadStylePresets();
+  buildStyleTagPicker();
+  $("spArtistUp").addEventListener("click", () => wrapArtist("{", "}"));
+  $("spArtistDown").addEventListener("click", () => wrapArtist("[", "]"));
   $("newStylePresetBtn").addEventListener("click", () => openStylePresetForm(null));
   $("captureStylePresetBtn").addEventListener("click", () => {
     openStylePresetForm(null);
