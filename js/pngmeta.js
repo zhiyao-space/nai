@@ -83,10 +83,10 @@ function metaToComment(m) {
     mask: "",
     extra_noise_seed: m.seed,
     variations: [],
-    reference_image_multiple: [],
-    reference_information_extracted_multiple: [],
-    reference_strength_multiple: [],
-    use_reference_image: false,
+    reference_image_multiple: (m.vibes || []).map((v) => v.b64 || ""),
+    reference_information_extracted_multiple: (m.vibes || []).map((v) => v.infoExtracted ?? 1),
+    reference_strength_multiple: (m.vibes || []).map((v) => v.referenceStrength ?? 0.6),
+    use_reference_image: (m.vibes || []).length > 0,
     ucPreset: m.ucpOn ? 0 : 1,
     qualityToggle: !!m.qualityOn,
     params_version: isV4 ? 3 : 2,
@@ -151,6 +151,9 @@ function commentToMeta(c) {
   if (action === "generate" && c.mask) action = "inpaint";
   else if (action === "generate" && c.image) action = "img2img";
   const source = c.__source || "";
+  const refImgs = Array.isArray(c.reference_image_multiple) ? c.reference_image_multiple : [];
+  const refInfo = Array.isArray(c.reference_information_extracted_multiple) ? c.reference_information_extracted_multiple : [];
+  const refStr = Array.isArray(c.reference_strength_multiple) ? c.reference_strength_multiple : [];
   return {
     prompt: c.prompt ?? "",
     negative: c.uc ?? "",
@@ -170,6 +173,11 @@ function commentToMeta(c) {
     characters: chars,
     useCoords: !!(c.v4_prompt && c.v4_prompt.use_coords),
     useOrder: c.v4_prompt ? c.v4_prompt.use_order !== false : false,
+    vibes: refImgs.filter(Boolean).map((b64, i) => ({
+      b64,
+      infoExtracted: refInfo[i] ?? 1,
+      referenceStrength: refStr[i] ?? 0.6
+    })),
     model: c.model || (c.v4 ? "nai-diffusion-4-5-full"
       : /XL/i.test(source) ? "nai-diffusion-3" : undefined)
   };
@@ -316,6 +324,8 @@ async function embedStealthPngInfo(blob, jsonString) {
     for (const b of payload) for (let i = 7; i >= 0; i--) bits.push((b >> i) & 1);
     const imageData = await loadPngPixels(blob);
     if (!imageData) return blob;
+    // 容量保护: alpha 每像素只能藏 1 位, 装不下时跳过隐形通道 (tEXt 仍完整携带参数)
+    if (bits.length > imageData.width * imageData.height) return blob;
     writeBitsToAlpha(imageData.data, imageData.width, imageData.height, bits);
     const cv = document.createElement("canvas");
     cv.width = imageData.width;

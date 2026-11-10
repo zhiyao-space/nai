@@ -1425,6 +1425,18 @@ function reuseParams(meta) {
     params.useOrder = meta.useOrder;
     $("useOrderToggle").checked = meta.useOrder;
   }
+  if (Array.isArray(meta.vibes) && meta.vibes.length) {
+    vibes = meta.vibes
+      .filter((v) => v.b64)
+      .map((v) => ({
+        id: crypto.randomUUID(),
+        b64: v.b64,
+        dataUrl: "data:image/png;base64," + v.b64,
+        infoExtracted: v.infoExtracted ?? 1,
+        referenceStrength: v.referenceStrength ?? 0.6
+      }));
+    renderVibeList();
+  }
   updateVibeHints();
   saveParams();
   if (isMobileView()) switchView("creation");
