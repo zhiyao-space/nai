@@ -55,6 +55,8 @@ const DEFAULT_SETTINGS = {
   model: "nai-diffusion-4-5-curated",
   customModel: "",
   artistBase: "https://danbooru.donmai.us",
+  visionBase: "",
+  visionKey: "",
   visionModel: ""
 };
 
@@ -1686,6 +1688,8 @@ function openSettings() {
   $("apiPath").value = settings.path;
   $("apiModelCustom").value = settings.customModel;
   $("artistBase").value = settings.artistBase || "";
+  $("visionBase").value = settings.visionBase || "";
+  $("visionKey").value = settings.visionKey || "";
   $("visionModel").value = settings.visionModel || "";
   fillApiModelSelect();
   $("settingsModal").classList.remove("hidden");
@@ -1765,6 +1769,8 @@ function bindSettingsModal() {
     settings.customModel = $("apiModelCustom").value.trim();
     settings.model = $("apiModelSelect").value || settings.model;
     settings.artistBase = $("artistBase").value.trim() || "https://danbooru.donmai.us";
+    settings.visionBase = $("visionBase").value.trim();
+    settings.visionKey = $("visionKey").value.trim();
     settings.visionModel = $("visionModel").value.trim();
     params.model = settings.model;
     saveSettings();
@@ -2338,7 +2344,8 @@ async function aiStyleAnalyze() {
     return;
   }
   toast(`正在用 ${vm} 深度分析画风…`, "ok");
-  const text = await requestVisionAnalysis(settings, vm, lastStyleExtract.b64);
+  const visionCfg = { base: settings.visionBase || settings.base, key: settings.visionKey || settings.key };
+  const text = await requestVisionAnalysis(visionCfg, vm, lastStyleExtract.b64);
   let aiTags = [];
   let summary = "";
   try {
