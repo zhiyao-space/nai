@@ -1,0 +1,51 @@
+# WebSearch 完整正文
+# query: NovelAI V4.5 API payload "precise reference" reference fields "reference_type" OR "reference_fidelity" OR "reference_image_multiple" 参数
+# index: 5
+
+Precise Reference Release: Character & Style References + Reference Inpainting
+Introducing the Precise Reference Update
+
+We’re excited to share a new update that expands how you guide your generations: Style Reference is now supported under Precise Reference and can be used alone, or in combination with Character Reference!
+Precise Reference: Character & Style Reference
+
+With the introduction of Style Reference we decided to come up with a new umbrella term, “Precise Reference”, to list both Character & Style reference, or a combination of both references under, and we may expand upon those in the future.
+
+The naming has been updated in the UI.
+
+With this update, you can include one or more references of each type or a combination selection of both! The generation process will then take all provided references into account, giving you even finer control over both the overall visual style of your image, and the appearance of your character.
+How It Works
+
+Style Reference complements Character Reference by influencing the overall style of a generated image. You’re free to mix and match both references to guide your creative vision. You can even create completely new styles by mixing and matching your references.
+
+However, please note that using multiple character references at once will currently blend them together, rather than treating them as separate characters within a single generation.
+
+Understanding Precise Reference Control: Strength and Fidelity Sliders
+
+Precise Reference comes with two sliders that give you finer control over how references influence your generations. Each slider serves a distinct purpose, allowing you to balance flexibility, accuracy, and stylistic influence with ease.
+
+Strength Slider
+ The Strength slider works similarly to the familiar Reference Strength slider used for Vibe Transfer. It controls how strongly the AI attempts to emulate visual cues from the provided input image.
+
+As the slider approaches 1, the AI increasingly adheres to elements such as stylistic features, color palettes, and other visual characteristics found in the reference image. Lower values on this setting grant the AI greater creative license and freedom. Conversely, higher values increase the influence of the reference image on the output, which can make facial expressions, angles, and character poses appear overly similar to your reference image. If this over-reliance on the reference becomes a recurring problem, reduce the slider value to allow the AI more creative latitude.
+
+Fidelity Slider
+ The Fidelity slider functions the same way as the previous Fidelity slider found in Character Reference.
+Under-the-Hood Updates
+
+To make Style Reference possible, we also updated the existing Character Reference system. These changes were necessary to support the new functionality. While we’ve worked hard to ensure the system remains high quality, some users may notice slight differences compared to previous behavior.
+Inpainting
+
+But that’s not all! We’ve also trained a whole separate model to allow you to use Character and Style References to affect Inpainting. You can use your References to guide what the AI will infill into the selected area. This easily allows you to fix up outfits, details or other characteristics that you want to include in your generation!
+
+Note that for best results, when inpainting while using style references, the strength and/or fidelity of the style references may need to be lowered to avoid a degradation in quality.
+Cost Considerations
+
+The cost of generation scales with the number of references you use. This is because each reference runs through a dedicated reference model, which operates independently and is significantly larger than the base generation model. More references mean more processing, and therefore a higher Anlas cost.
+Looking Ahead
+
+This update is foundational for achieving generations that are more expressive, flexible, and most importantly consistent, all while precisely matching your chosen style and/or character.
+
+We’re thrilled to see what you get up to with style and character references together! Please feel free to share your works and comparisons with us on X, Discord, or our Reddit!
+Gallery Showcase
+
+Here’s a little gallery of works created with Precise Generation.

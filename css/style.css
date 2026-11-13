@@ -1358,3 +1358,12 @@ body.view-history .panel-right { display: flex; }
  min-width: 0;
 }
 .vibe-preset-card .icon-btn { flex: 0 0 auto; }
+
+/* 精准参考 (Precise Reference) */
+.precise-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.precise-item { display: flex; align-items: center; gap: 8px; background: #232323; border: 1px solid #333; border-radius: 12px; padding: 8px; }
+.precise-item img { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; flex: none; cursor: pointer; }
+.precise-item select { flex: 1 1 auto; min-width: 0; background: #1c1c1c; color: #ddd; border: 1px solid #3a3a3a; border-radius: 8px; padding: 6px; font-size: 12px; }
+.precise-item input[type="number"] { width: 58px; flex: none; background: #1c1c1c; color: #ddd; border: 1px solid #3a3a3a; border-radius: 8px; padding: 6px; font-size: 12px; }
+.precise-label { flex: none; font-size: 11px; color: #888; }
+.precise-item .icon-btn { flex: none; }

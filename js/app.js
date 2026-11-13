@@ -63,6 +63,20 @@ let maskDirty = false;
 
 const VIBE_LIMIT = 4; /* 空悲切中转站: Vibe Transfer 最多 4 张 (官方 5 张, 以中转站为准) */
 const LS_VIBES = "nai_clone_vibes";
+const LS_PRECISE = "nai_clone_precise_refs_v1";
+let preciseRefs = [];
+
+/* 精准参考 (Precise Reference, 官方 V4.5): 上限 4 张, 与氛围转移互斥 */
+const PRECISE_LIMIT = 4;
+const PRECISE_TYPES = [
+  ["character", "角色 (还原人物长相/服装)"],
+  ["style", "风格 (复刻画风)"],
+  ["character&style", "角色+风格 (两者兼顾)"]
+];
+
+function savePrecise() {
+  try { localStorage.setItem(LS_PRECISE, JSON.stringify(preciseRefs)); } catch (e) { /* 超出配额则不持久化 */ }
+}
 
 function vibeLimit() {
   return familyOf() === 3 ? 1 : VIBE_LIMIT;
@@ -99,6 +113,8 @@ function loadState() {
     if (p) params = { ...DEFAULT_PARAMS, ...p };
     const v = JSON.parse(localStorage.getItem(LS_VIBES) || "null");
     if (Array.isArray(v)) vibes = v.filter((x) => x && x.b64).slice(0, VIBE_LIMIT);
+    const pr = JSON.parse(localStorage.getItem(LS_PRECISE) || "null");
+    if (Array.isArray(pr)) preciseRefs = pr.filter((x) => x && x.b64).slice(0, PRECISE_LIMIT);
   } catch (e) {}
 }
 
@@ -1027,6 +1043,89 @@ function renderVibeList() {
   updateVibeHints();
 }
 
+function addPreciseFiles(files) {
+  const list = Array.from(files || []).filter((f) => /^image\//.test(f.type));
+  if (!list.length) return;
+  for (const file of list) {
+    if (preciseRefs.length >= PRECISE_LIMIT) { toast(`精准参考最多 ${PRECISE_LIMIT} 张`, "warn"); break; }
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const scaled = await downscaleToMax(String(reader.result), 1536);
+        const png = await ensurePngDataUrl(scaled.dataUrl);
+        preciseRefs.push({ id: uid(), b64: png.split(",")[1] || "", dataUrl: png, type: "character", strength: 1, fidelity: 1 });
+        savePrecise();
+        renderPreciseList();
+      } catch (e) { toast(e.message || "图片处理失败", "error"); }
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+function removePreciseRef(id) {
+  const idx = preciseRefs.findIndex((r) => r.id === id);
+  if (idx >= 0) { preciseRefs.splice(idx, 1); savePrecise(); renderPreciseList(); }
+}
+
+function renderPreciseList() {
+  const wrap = $("preciseList");
+  wrap.innerHTML = "";
+  for (const r of preciseRefs) {
+    const row = document.createElement("div");
+    row.className = "precise-item";
+    const img = document.createElement("img");
+    img.src = r.dataUrl;
+    img.alt = "";
+    const typeSel = document.createElement("select");
+    for (const [val, label] of PRECISE_TYPES) {
+      const opt = document.createElement("option");
+      opt.value = val; opt.textContent = label;
+      typeSel.appendChild(opt);
+    }
+    typeSel.value = r.type || "character";
+    typeSel.addEventListener("change", () => { r.type = typeSel.value; savePrecise(); });
+    const strengthInp = document.createElement("input");
+    strengthInp.type = "number"; strengthInp.min = "-1"; strengthInp.max = "1"; strengthInp.step = "0.05";
+    strengthInp.value = r.strength ?? 1; strengthInp.title = "强度 (对画面影响多大)";
+    strengthInp.addEventListener("change", () => { r.strength = +strengthInp.value; savePrecise(); });
+    const fidInp = document.createElement("input");
+    fidInp.type = "number"; fidInp.min = "0"; fidInp.max = "1"; fidInp.step = "0.05";
+    fidInp.value = r.fidelity ?? 1; fidInp.title = "保真度 (参考执行多严格)";
+    fidInp.addEventListener("change", () => { r.fidelity = +fidInp.value; savePrecise(); });
+    const del = document.createElement("button");
+    del.className = "icon-btn"; del.textContent = "✕"; del.title = "移除";
+    del.addEventListener("click", () => removePreciseRef(r.id));
+    const lab1 = document.createElement("span"); lab1.className = "precise-label"; lab1.textContent = "强度";
+    const lab2 = document.createElement("span"); lab2.className = "precise-label"; lab2.textContent = "保真";
+    row.appendChild(img);
+    row.appendChild(typeSel);
+    row.appendChild(lab1); row.appendChild(strengthInp);
+    row.appendChild(lab2); row.appendChild(fidInp);
+    row.appendChild(del);
+    wrap.appendChild(row);
+  }
+  const box = $("preciseUploadBox");
+  if (box) box.classList.toggle("hidden", preciseRefs.length >= PRECISE_LIMIT);
+}
+
+function bindPrecise() {
+  const box = $("preciseUploadBox");
+  const input = $("preciseFileInput");
+  box.addEventListener("click", () => input.click());
+  input.addEventListener("change", () => {
+    const files = input.files;
+    input.value = "";
+    addPreciseFiles(files);
+  });
+  box.addEventListener("dragover", (e) => { e.preventDefault(); box.classList.add("drag"); });
+  box.addEventListener("dragleave", () => box.classList.remove("drag"));
+  box.addEventListener("drop", (e) => {
+    e.preventDefault(); box.classList.remove("drag");
+    addPreciseFiles(e.dataTransfer.files);
+  });
+  renderPreciseList();
+}
+
 function updateVibeHints() {
   const hint = $("vibeHint");
   const msgs = [];
@@ -1621,6 +1720,12 @@ function collectParams() {
       b64: v.b64,
       infoExtracted: v.infoExtracted,
       referenceStrength: v.referenceStrength
+    })),
+    preciseRefs: preciseRefs.map((r) => ({
+      b64: r.b64,
+      type: r.type,
+      strength: r.strength,
+      fidelity: r.fidelity
     }))
   };
 }
@@ -2125,6 +2230,7 @@ function init() {
   bindImageUpload();
   bindMaskEditor();
   bindVibeTransfer();
+  bindPrecise();
   bindVibePresets();
   bindTranslateButtons();
   bindSizeControls();

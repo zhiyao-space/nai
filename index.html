@@ -74,6 +74,21 @@
 
       <section class="card collapsible open" data-collapsible>
         <div class="card-title clickable" data-collapse-toggle>
+          <span>精准参考 (Precise Reference) <button class="hint-btn" title="这是什么？">?</button></span>
+          <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <p class="hint-text hidden">官方 V4.5 专属：直接参考图片里的「角色长相」或「画风本身」，比氛围转移更精准还原。每张图可选类型（角色 / 风格 / 角色+风格），并调「强度」(对画面影响多大) 与「保真度」(参考执行多严格)。与氛围转移互斥（同时存在时只发送精准参考）；与图生图 / 局部重绘可叠加；仅 V4.5 系模型生效，中转站每次生成每张参考加收约 5 Anlas。推荐用干净立绘、大尺寸 (1024x1536 等) 参考图。</p>
+        <div class="collapsible-body">
+          <div class="upload-box vibe-upload" id="preciseUploadBox">
+            <input type="file" id="preciseFileInput" accept="image/png, image/jpeg, image/webp" multiple class="hidden">
+            <div class="upload-empty" id="preciseUploadEmpty">点这里选图 · 拖拽 · Ctrl+V 粘贴 (最多 4 张)</div>
+          </div>
+          <div id="preciseList" class="precise-list"></div>
+        </div>
+      </section>
+
+      <section class="card collapsible open" data-collapsible>
+        <div class="card-title clickable" data-collapse-toggle>
           <span>氛围转移 · 画风锁定 (PNG 元数据) <button class="hint-btn" title="这是什么？">?</button></span>
           <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
         </div>

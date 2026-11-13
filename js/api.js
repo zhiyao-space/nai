@@ -176,13 +176,22 @@ function buildNaiPayload(p) {
     params.prefer_brownian = true;
     const chars = (p.characters || []).filter((c) => c.prompt && c.prompt.trim());
     const useCoords = !!p.useCoords && chars.length > 0;
-    const vibes = (p.vibes || []).filter((v) => v.b64);
+    const refs = (p.preciseRefs || []).filter((r) => r && r.b64);
+    const vibes = (p.vibes || []).filter((v) => v.b64 && !refs.length); /* 官方: 精准参考与氛围转移互斥 */
 
     params.negative_prompt = ucp;
     params.use_coords = useCoords;
     params.normalize_reference_strength_multiple = true;
     params.legacy_uc = false;
     params.image_format = "png";
+    if (refs.length) {
+      /* Precise Reference (官方 V4.5): director_reference_* 字段, secondary = 1 - fidelity */
+      params.director_reference_images = refs.map((r) => r.b64);
+      params.director_reference_descriptions = refs.map((r) => ({ caption: { base_caption: r.type || "character", char_captions: [] }, legacy_uc: false }));
+      params.director_reference_information_extracted = refs.map(() => 1);
+      params.director_reference_strength_values = refs.map((r) => Number(r.strength ?? 1));
+      params.director_reference_secondary_strength_values = refs.map((r) => 1 - Number(r.fidelity ?? 1));
+    }
     params.reference_image_multiple = vibes.map((v) => v.encoded || v.b64);
     params.reference_information_extracted_multiple = vibes.map((v) => Number(v.infoExtracted ?? 1));
     params.reference_strength_multiple = vibes.map((v) => Number(v.referenceStrength ?? 0.6));
@@ -468,7 +477,8 @@ async function ensureVibesEncoded(cfg, params, signal) {
 async function requestGeneration(cfg, params, signal) {
   /* 参考图通道: 中转站不接受原始图片 Base64, 需先 encode-vibe 编码;
      OpenAI Images 端点不支持氛围字段, 带氛围图时改走原生端点 */
-  if ((params.vibes || []).some((v) => v && v.b64)) {
+  const hasRefs = (params.vibes || []).some((v) => v && v.b64) || (params.preciseRefs || []).some((r) => r && r.b64);
+  if (hasRefs) {
     await ensureVibesEncoded(cfg, params, signal);
     if (cfg.format === "openai") return generateNai(cfg, buildNaiPayload(params), signal);
   }
