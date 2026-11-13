@@ -103,7 +103,13 @@
               <button class="mini-btn" id="vibeTweakResetBtn" type="button">还原为提取结果</button>
             </div>
           </div>
-          <div class="vibe-preset-head">画风预设 <span class="preset-status hidden" id="vibePresetStatus"></span></div>
+          <div class="vibe-preset-head">画风预设 <span class="preset-status hidden" id="vibePresetStatus"></span>
+            <span class="preset-actions">
+              <button class="mini-btn" id="vibeExportBtn" type="button" title="把全部画风预设打包成 JSON 文件带走">导出</button>
+              <button class="mini-btn" id="vibeImportBtn" type="button" title="从 JSON 文件导入画风预设（复刻画风）">导入</button>
+              <input type="file" id="vibeImportFile" accept="application/json,.json" class="hidden" />
+            </span>
+          </div>
           <div id="vibePresetList" class="vibe-preset-list"></div>
         </div>
       </section>

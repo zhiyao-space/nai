@@ -1229,6 +1229,59 @@ function applyVibePreset(p) {
   if (vp.sampler && vp.sampler.trim()) p.sampler = vp.sampler.trim();
 }
 
+function exportVibePresets() {
+  if (!vibePresets.length) {
+    toast("还没有可导出的画风预设", "warn");
+    return;
+  }
+  const blob = new Blob([JSON.stringify({ type: "nai-vibe-presets", version: 1, presets: vibePresets }, null, 2)], { type: "application/json" });
+  downloadBlob(blob, "nai-style-presets.json");
+  toast(`已导出 ${vibePresets.length} 个画风预设`, "ok");
+}
+
+function importVibePresetFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(String(reader.result));
+      const list = Array.isArray(data) ? data : (data && Array.isArray(data.presets) ? data.presets : null);
+      if (!list) {
+        toast("文件格式不对：需要本站导出的画风预设 JSON", "error");
+        return;
+      }
+      let added = 0;
+      let skipped = 0;
+      for (const sp of list) {
+        if (!sp || !sp.name) continue;
+        const dup = vibePresets.some((s) => s.id === sp.id || (s.name === sp.name && s.artists === sp.artists && s.seed === sp.seed));
+        if (dup) { skipped++; continue; }
+        vibePresets.push({
+          id: sp.id || uid(),
+          name: sp.name,
+          createdAt: sp.createdAt || Date.now(),
+          artists: sp.artists || "",
+          styleTags: sp.styleTags || "",
+          negative: sp.negative || "",
+          seed: sp.seed != null ? String(sp.seed) : "",
+          scale: sp.scale != null ? String(sp.scale) : "",
+          steps: sp.steps != null ? String(sp.steps) : "",
+          cfgRescale: sp.cfgRescale != null ? String(sp.cfgRescale) : "",
+          sampler: sp.sampler || ""
+        });
+        added++;
+      }
+      saveVibePresets();
+      renderVibePresets();
+      toast(added ? `已导入 ${added} 个画风预设${skipped ? `，跳过 ${skipped} 个重复` : ""}` : "文件里的预设都已存在，未新增", "ok", 5000);
+    } catch (e) {
+      toast("导入失败: " + (e.message || e), "error");
+    }
+  };
+  reader.onerror = () => toast("读取文件失败", "error");
+  reader.readAsText(file);
+}
+
 function bindVibePresets() {
   loadVibePresets();
   const box = $("vibePresetUpload");
@@ -1265,6 +1318,13 @@ function bindVibePresets() {
     if (lastVibeExtract) fillVibeTweakForm(lastVibeExtract);
   });
   $("vibeSaveTweakedBtn").addEventListener("click", saveVibePresetFromForm);
+  $("vibeExportBtn").addEventListener("click", exportVibePresets);
+  $("vibeImportBtn").addEventListener("click", () => $("vibeImportFile").click());
+  $("vibeImportFile").addEventListener("change", () => {
+    const f = $("vibeImportFile").files && $("vibeImportFile").files[0];
+    $("vibeImportFile").value = "";
+    if (f) importVibePresetFile(f);
+  });
   renderVibeExtractResult();
   renderVibePresets();
 }
