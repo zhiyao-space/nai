@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NovelAI 图像生成</title>
+<link rel="stylesheet" href="css/style.css?v=20261110g">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="logo">
+    <span class="logo-main">NovelAI</span>
+    <span class="logo-sub">图像生成</span>
+  </div>
+  <div class="top-actions">
+    <button class="icon-btn" id="settingsBtn" title="中转站 API 设置">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span>设置</span>
+    </button>
+  </div>
+</header>
+
+<div class="layout">
+
+  <aside class="panel-left">
+    <div class="panel-scroll">
+
+      <section class="card">
+        <div class="card-title">画面描述 (提示词) <button class="hint-btn" title="这是什么？">?</button> <span class="char-count" id="promptCount">0</span> <button class="mini-btn" id="translatePromptBtn" title="把中文提示词翻译成英文标签（需在设置里选翻译模型）">中→英</button> <button class="mini-btn" id="importMetaBtn" title="选择一张 NovelAI 或本站生成的 PNG，自动读取内嵌参数并复用">导入参数</button></div>
+        <p class="hint-text hidden">用文字描述想画的内容：人物、动作、服装、背景、画风都可以写。写得越具体，画面越贴近预期。</p>
+        <textarea id="promptInput" rows="5" spellcheck="false" placeholder="描述你想画的画面，如：银发少女，教室窗边，夕阳，动漫风"></textarea>
+        <input type="file" id="metaFileInput" accept="image/png" class="hidden">
+        <div class="toggle-row">
+          <label class="switch"><input type="checkbox" id="qualityToggle" checked><span class="slider"></span><span class="switch-label">自动画质词 <button class="hint-btn" title="这是什么？">?</button></span></label>
+          <label class="switch"><input type="checkbox" id="ucpToggle" checked><span class="slider"></span><span class="switch-label">自动排除瑕疵 <button class="hint-btn" title="这是什么？">?</button></span></label>
+        </div>
+        <p class="hint-text hidden">自动画质词：开启后自动附加「very aesthetic, masterpiece」等关键词，整体更精致。自动排除瑕疵：生成时自动排除模糊、低质量、水印等常见毛病，不用手写。</p>
+      </section>
+
+      <section class="card">
+        <div class="card-title">排除内容 (负向提示词) <button class="hint-btn" title="这是什么？">?</button> <span class="char-count" id="negativeCount">0</span> <button class="mini-btn" id="translateNegativeBtn" title="把中文排除内容翻译成英文">中→英</button> <button class="mini-btn" id="clearNegativeBtn">清空</button></div>
+        <p class="hint-text hidden">写不想出现在画面里的东西，例如：两个人、文字、水印、模糊。开启「自动排除瑕疵」时留空即可，会自动填入常用排除项。</p>
+        <textarea id="negativeInput" rows="3" spellcheck="false" placeholder="不想出现的东西（开启自动排除瑕疵时留空就行）"></textarea>
+      </section>
+
+      <section class="card collapsible open" data-collapsible>
+        <div class="card-title clickable" data-collapse-toggle>
+          <span>画师串源库 (Danbooru) <button class="hint-btn" title="这是什么？">?</button></span>
+          <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <p class="hint-text hidden">搜画师名字，点一下就把画师串进主提示词。画师名用 Danbooru 原文（罗马音 + 下划线）。混 2~3 个效果最稳，想突出谁就用大括号包住：{画师名}。连不上画师库时可去「设置」换画师库地址，搜索失败会自动回退到内置离线合集。</p>
+        <div class="collapsible-body">
+          <input type="text" id="artistSearch" placeholder="搜画师名，如 as109 / miv4t / 清新" autocomplete="off">
+          <p class="field-hint hidden" id="artistHint"></p>
+          <div id="artistResults" class="artist-results"></div>
+          <div id="artistFavBlock" class="hidden">
+            <div class="artist-fav-head">我的收藏 <button class="mini-btn" id="clearArtistFavsBtn">清空</button></div>
+            <div id="artistFavs" class="artist-favs"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card collapsible open" data-collapsible>
+        <div class="card-title clickable" data-collapse-toggle>
+          <span>画风预设 (稳定画风) <button class="hint-btn" title="这是什么？">?</button></span>
+          <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <p class="hint-text hidden">把画师串、风格标签和一组固定参数打包成预设。启用后每次生成自动把这套「画风代码」附加到请求里，不用手动重复输入，画风更稳定。点预设名即启用，再点一次停用；支持导出 JSON 分享给别人。</p>
+        <div class="collapsible-body">
+          <div id="stylePresetList" class="preset-list"></div>
+          <p class="preset-status hidden" id="stylePresetStatus"></p>
+          <div class="preset-actions">
+            <button class="mini-btn" id="newStylePresetBtn" type="button">新建预设</button>
+            <button class="mini-btn" id="captureStylePresetBtn" type="button">用当前设置建预设</button>
+            <button class="mini-btn" id="abTestBtn" type="button">A/B 验证</button>
+            <button class="mini-btn" id="exportStylePresetsBtn" type="button">导出</button>
+            <button class="mini-btn" id="importStylePresetsBtn" type="button">导入</button>
+            <input type="file" id="stylePresetFileInput" accept="application/json,.json" class="hidden">
+          </div>
+          <div id="abResult" class="extract-result hidden">
+            <p class="extract-tags" id="abSummary"></p>
+            <div class="ab-grid">
+              <figure><img id="abImgA" alt="带预设"><figcaption>A · 带预设「<span id="abPresetName"></span>」</figcaption></figure>
+              <figure><img id="abImgB" alt="不带预设"><figcaption>B · 不带预设（相同 Seed）</figcaption></figure>
+            </div>
+          </div>
+          <div class="extract-block">
+            <div class="card-title clickable" data-collapse-toggle>
+              <span>从图片提取画风 <button class="hint-btn" title="这是什么？">?</button></span>
+              <svg class="chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            <p class="hint-text hidden">「氛围转移」的替代方案：选一张喜欢的图，优先读取它内嵌的官方生成参数（NAI 图 100% 精确还原配方）；没有元数据时用本地分析配色/明暗/对比，填了视觉分析模型后还能让 AI 深度解读画风细节。结果一键填入预设，之后每张图都保持这种画风，全程不需要中转站支持参考图。</p>
+            <div class="collapsible-body">
+              <div class="preset-actions">
+                <button class="mini-btn" id="extractFromCanvasBtn" type="button">从画布当前图提取</button>
+                <button class="mini-btn" id="extractFromFileBtn" type="button">从本地图片提取</button>
+                <button class="mini-btn" id="aiStyleAnalyzeBtn" type="button">AI 深度分析</button>
+                <input type="file" id="styleExtractFileInput" accept="image/*" class="hidden">
+              </div>
+              <div id="styleMetaResult" class="extract-result hidden">
+                <p class="meta-badge">检测到内嵌生成参数 · 官方精确配方</p>
+                <p class="extract-tags" id="styleMetaSummary"></p>
+                <div class="preset-actions">
+                  <button class="mini-btn" id="useMetaAsPresetBtn" type="button">存为画风预设</button>
+                  <button class="mini-btn" id="applyMetaParamsBtn" type="button">还原全部参数到创作页</button>
+                </div>
+              </div>
+              <div id="styleExtractResult" class="extract-result hidden">
+                <div class="swatch-row" id="styleSwatches"></div>
+                <p class="extract-tags" id="styleExtractTags"></p>
+                <button class="mini-btn" id="useExtractedStyleBtn" type="button">填入预设表单</button>
+              </div>
+            </div>
+          </div>
+          <div id="stylePresetForm" class="preset-form hidden">
+            <input type="text" id="spName" placeholder="预设名称，如：清新水彩">
+            <textarea id="spArtist" rows="2" spellcheck="false" placeholder="画师串，如 artist:wlop, artist:miv4t（V4.5 推荐 artist: 前缀）"></textarea>
+            <div class="artist-weight-row">
+              <span class="tag-group-label">画师串权重</span>
+              <button class="mini-btn" id="spArtistUp" type="button">{ } 加权</button>
+              <button class="mini-btn" id="spArtistDown" type="button">[ ] 减权</button>
+            </div>
+            <textarea id="spTags" rows="2" spellcheck="false" placeholder="风格标签（可选），如 flat color, soft lighting, watercolor"></textarea>
+            <div class="style-tag-picker" id="spTagPicker"></div>
+            <input type="text" id="spUc" placeholder="额外负向词（可选），如 bad hands, extra digits">
+            <div class="preset-param-grid">
+              <input type="text" id="spModel" placeholder="模型名（留空跟随）">
+              <select id="spSampler"></select>
+              <input type="number" id="spSteps" placeholder="步数（留空跟随）" min="1" max="50">
+              <input type="number" id="spScale" placeholder="引导 Scale（留空跟随）" min="0" max="10" step="0.1">
+              <input type="number" id="spCfg" placeholder="CFG 残差（留空跟随）" min="0" max="1" step="0.05">
+              <input type="number" id="spVariety" placeholder="惊喜度 Variety（留空跟随）" min="0" max="100" step="1">
+            </div>
+            <div class="preset-form-btns">
+              <button class="ghost-btn" id="cancelStylePresetBtn" type="button">取消</button>
+              <button class="primary-btn" id="saveStylePresetBtn" type="button">保存预设</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card collapsible open" data-collapsible>
+        <div class="card-title clickable" data-collapse-toggle>
+          <span>氛围转移 (Vibe Transfer) <button class="hint-btn" title="这是什么？">?</button></span>
+          <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <p class="hint-text hidden">上传参考图当「氛围板」：生成时 AI 会参考它的画风、色调和构图。每张图可单独调「信息提取」(从图里提取多少细节) 和「参考强度」(对画面的影响多大)。仅 NovelAI 官方格式支持；V3 模型只认第 1 张。</p>
+        <div class="collapsible-body">
+          <div class="upload-box vibe-upload" id="vibeUploadBox">
+            <input type="file" id="vibeFileInput" accept="image/png, image/jpeg, image/webp" multiple class="hidden">
+            <div class="upload-empty" id="vibeUploadEmpty">点这里选图 · 拖拽 · Ctrl+V 粘贴 (最多 5 张)</div>
+          </div>
+          <p class="field-hint hidden" id="vibeHint"></p>
+          <div id="vibeList" class="vibe-list"></div>
+        </div>
+      </section>
+
+      <section class="card collapsible open" data-collapsible>
+        <div class="card-title clickable" data-collapse-toggle>
+          <span>多角色设定 (角色提示词) <button class="hint-btn" title="这是什么？">?</button></span>
+          <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <p class="hint-text hidden">给每个角色单独写外貌描述，还能指定站位，适合画多人图。仅 V4 / V4.5 模型支持；V3 模型会自动合并进主描述。「指定站位」= 按每个角色的位置百分比安排站位；「按顺序画」= 角色按列表顺序出现。</p>
+        <div class="collapsible-body">
+          <div class="toggle-row">
+            <label class="switch"><input type="checkbox" id="useCoordsToggle"><span class="slider"></span><span class="switch-label">指定站位</span></label>
+            <label class="switch"><input type="checkbox" id="useOrderToggle" checked><span class="slider"></span><span class="switch-label">按顺序画</span></label>
+          </div>
+          <div id="characterList" class="char-list"></div>
+          <button class="ghost-btn full" id="addCharacterBtn">+ 添加角色</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-title">画风一键加成 <button class="hint-btn" title="这是什么？">?</button></div>
+        <p class="hint-text hidden">点一下卡片就会自动附加对应画风的关键词，和你的画面描述叠加使用，可以随时换。</p>
+        <div class="style-grid" id="styleGrid"></div>
+      </section>
+
+      <section class="card collapsible open" data-collapsible>
+        <div class="card-title clickable" data-collapse-toggle>
+          <span>AI 设置</span>
+          <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="collapsible-body">
+          <div class="field">
+            <label>生成方式 <button class="hint-btn" title="这是什么？">?</button></label>
+            <p class="hint-text hidden">凭空画：纯文字从零生成。照图改：上传原图让 AI 参考着改。局部重绘：在原图上涂抹一块区域，只重画那一块，其余保持原样。</p>
+            <div class="seg" id="actionSeg">
+              <button data-action="generate" class="active">凭空画</button>
+              <button data-action="img2img">照图改</button>
+              <button data-action="inpaint">局部重绘</button>
+            </div>
+          </div>
+
+          <div class="field i2i-panel hidden" id="img2imgPanel">
+            <label>原图 <button class="hint-btn" title="这是什么？">?</button></label>
+            <p class="hint-text hidden">点这里选图、把图片拖进来、或直接 Ctrl+V 粘贴截图。加载后画面尺寸会自动同步为原图尺寸。</p>
+            <div class="upload-box" id="imageUploadBox">
+              <input type="file" id="imageFileInput" accept="image/png, image/jpeg, image/webp" class="hidden">
+              <div class="upload-empty" id="uploadEmpty">点这里选图 · 拖拽 · Ctrl+V 粘贴</div>
+              <div class="upload-preview hidden" id="uploadPreview">
+                <img id="sourcePreviewImg" alt="源图">
+                <button class="icon-btn sm upload-remove" id="removeSourceBtn" title="移除源图">
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="field slider-field i2i-panel hidden" id="strengthPanel">
+            <label>改动幅度 (Strength) <button class="hint-btn" title="这是什么？">?</button> <output id="strengthVal">0.70</output></label>
+            <p class="hint-text hidden">0 = 几乎不动，1 = 完全重画。想在原图上小改就调低 (0.4~0.6)，想大变样就调高 (0.7 以上)。</p>
+            <input type="range" id="strengthInput" min="0" max="1" step="0.01" value="0.7">
+          </div>
+
+          <div class="field slider-field i2i-panel hidden" id="noisePanel">
+            <label>加噪程度 (Noise) <button class="hint-btn" title="这是什么？">?</button> <output id="noiseVal">0.00</output></label>
+            <p class="hint-text hidden">往原图里掺多少随机干扰，越大变化越自由。一般 0~0.3，不需要就保持 0。</p>
+            <input type="range" id="noiseInput" min="0" max="1" step="0.01" value="0">
+          </div>
+
+          <div class="field i2i-panel hidden" id="maskPanel">
+            <label>涂抹重绘区域 (蒙版) <button class="hint-btn" title="这是什么？">?</button></label>
+            <p class="hint-text hidden">用手指/鼠标在图上涂抹想重画的部分，紫色区域就是重画范围，其余保持原样。涂错了切到「擦除」擦掉即可。</p>
+            <div class="seg" id="maskModeSeg">
+              <button data-mode="draw" class="active">涂抹</button>
+              <button data-mode="erase">擦除</button>
+            </div>
+            <div class="mask-wrap" id="maskWrap">
+              <img id="maskBaseImg" class="hidden" alt="蒙版底图">
+              <canvas id="maskCanvas"></canvas>
+            </div>
+            <div class="mask-tools">
+              <div class="slider-field grow">
+                <label>笔刷粗细 <output id="brushVal">40</output></label>
+                <input type="range" id="brushSizeInput" min="8" max="120" step="1" value="40">
+              </div>
+              <button class="ghost-btn" id="clearMaskBtn">清空涂抹</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>画风引擎 (模型) <button class="hint-btn" title="这是什么？">?</button></label>
+            <p class="hint-text hidden">模型列表自动从你配置的中转站拉取，「图像模型」分组置顶。列表里找不到的模型，去右上角「设置」用「自定义模型名」填写，填写后优先生效。</p>
+            <select id="modelSelect"></select>
+            <p class="field-hint hidden" id="customModelHint"></p>
+          </div>
+
+          <div class="field">
+            <label>画面尺寸 <button class="hint-btn" title="这是什么？">?</button> <span class="dim-show" id="dimShow">832 x 1216</span></label>
+            <p class="hint-text hidden">竖图适合人物立绘、手机壁纸；横图适合风景场景；方图适合头像。开启「高清大图」分辨率更大、细节更多，消耗也更高。</p>
+            <div class="seg" id="sizePreset">
+              <button data-preset="portrait" class="active">竖图</button>
+              <button data-preset="landscape">横图</button>
+              <button data-preset="square">方图</button>
+            </div>
+            <div class="size-row">
+              <label class="switch sm"><input type="checkbox" id="largeToggle"><span class="slider"></span><span class="switch-label">高清大图</span></label>
+              <div class="dim-inputs">
+                <input type="number" id="widthInput" min="64" max="3072" step="8" value="832">
+                <span>x</span>
+                <input type="number" id="heightInput" min="64" max="3072" step="8" value="1216">
+                <button class="icon-btn sm" id="swapSizeBtn" title="交换宽高">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="field slider-field">
+            <label>生成步数 (Steps) <button class="hint-btn" title="这是什么？">?</button> <output id="stepsVal">28</output></label>
+            <p class="hint-text hidden">AI 反复打磨画面的次数：越高越精细，也越慢、越耗资源。默认 28 已经很均衡。</p>
+            <input type="range" id="stepsInput" min="1" max="50" step="1" value="28">
+          </div>
+
+          <div class="field slider-field">
+            <label>听话程度 (Scale) <button class="hint-btn" title="这是什么？">?</button> <output id="scaleVal">5</output></label>
+            <p class="hint-text hidden">AI 有多严格地服从你的描述。太高会僵硬、颜色过艳；太低会自由发挥跑偏。常用 4~7。</p>
+            <input type="range" id="scaleInput" min="0" max="10" step="0.1" value="5">
+          </div>
+
+          <div class="field">
+            <label>绘制算法 (采样器) <button class="hint-btn" title="这是什么？">?</button></label>
+            <p class="hint-text hidden">生成画面的算法，不同算法笔触手感不同。不确定就保持默认的 Euler。</p>
+            <select id="samplerSelect"></select>
+          </div>
+
+          <div class="field">
+            <label>降噪节奏 (噪声调度) <button class="hint-btn" title="这是什么？">?</button></label>
+            <p class="hint-text hidden">控制生成过程的收敛节奏，一般保持 karras 就好，对画面影响不大。</p>
+            <select id="noiseSelect">
+              <option value="karras" selected>karras (推荐)</option>
+              <option value="exponential">exponential</option>
+              <option value="polyexponential">polyexponential</option>
+              <option value="native">native</option>
+            </select>
+          </div>
+
+          <div class="field slider-field">
+            <label>惊喜度 (Variety+) <button class="hint-btn" title="这是什么？">?</button> <output id="varietyVal">0</output></label>
+            <p class="hint-text hidden">调高后构图和内容更随机多变，适合抽卡找灵感；保持 0 则完全按参数稳定出图。</p>
+            <input type="range" id="varietyInput" min="0" max="100" step="1" value="0">
+          </div>
+
+          <div class="field slider-field">
+            <label>画面自然度 (CFG 残差) <button class="hint-btn" title="这是什么？">?</button> <output id="rescaleVal">0</output></label>
+            <p class="hint-text hidden">修正「听话程度」开太高导致的颜色过艳、对比过强，0~0.5 之间微调即可。</p>
+            <input type="range" id="rescaleInput" min="0" max="1" step="0.05" value="0">
+          </div>
+
+          <div class="field">
+            <label>画面编号 (Seed) <button class="hint-btn" title="这是什么？">?</button></label>
+            <p class="hint-text hidden">相同编号 + 相同参数 = 完全相同的图。留空则每次随机；骰子按钮一键随机，想「换个构图再画一张」就用它。</p>
+            <div class="seed-row">
+              <input type="number" id="seedInput" placeholder="随机" min="0" max="4294967295">
+              <button class="icon-btn" id="diceBtn" title="随机种子">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1" fill="currentColor"/><circle cx="15.5" cy="8.5" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="8.5" cy="15.5" r="1" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1" fill="currentColor"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>一次画几张 <button class="hint-btn" title="这是什么？">?</button></label>
+            <p class="hint-text hidden">一次生成几张图，越多越慢、消耗越多。抽卡建议一次 2~4 张挑最好的。</p>
+            <div class="seg" id="countSeg">
+              <button data-n="1" class="active">1</button>
+              <button data-n="2">2</button>
+              <button data-n="3">3</button>
+              <button data-n="4">4</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <div class="generate-wrap">
+      <button id="generateBtn" class="generate-btn">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.7a2 2 0 0 0 1.3 1.3L21 12l-5.8 1.9a2 2 0 0 0-1.3 1.3L12 21l-1.9-5.8a2 2 0 0 0-1.3-1.3L3 12l5.8-2a2 2 0 0 0 1.3-1.3z"/></svg>
+        <span id="generateLabel">生成图像</span>
+      </button>
+      <div class="generate-hint">Ctrl + Enter 快速生成</div>
+    </div>
+  </aside>
+
+  <main class="canvas-area">
+    <div class="canvas-empty" id="canvasEmpty">
+      <div class="empty-icon">
+        <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+      </div>
+      <p class="empty-title">到「创作」页写下画面描述，点「生成图像」试试</p>
+      <p class="empty-sub">首次使用请先点右上角「设置」，填好中转站地址和密钥</p>
+    </div>
+    <img id="mainImage" class="hidden" alt="生成结果">
+    <div class="canvas-bar hidden" id="canvasBar">
+      <span id="imageMeta"></span>
+      <div class="canvas-actions">
+        <button class="icon-btn" id="reuseBtn" title="复用参数">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          <span>复用参数</span>
+        </button>
+        <button class="icon-btn" id="downloadBtn" title="下载图像">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span>下载</span>
+        </button>
+        <button class="icon-btn" id="deleteBtn" title="删除此图">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+          <span>删除</span>
+        </button>
+      </div>
+    </div>
+    <div class="generating-overlay hidden" id="generatingOverlay">
+      <div class="spinner"></div>
+      <span>正在生成，请稍候…</span>
+      <button class="ghost-btn" id="cancelGenBtn">取消生成</button>
+    </div>
+  </main>
+
+  <aside class="panel-right">
+    <div class="history-head">
+      <span>生成历史 <em id="historyCount"></em></span>
+      <button class="icon-btn sm" id="clearHistoryBtn" title="清空历史">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+      </button>
+    </div>
+    <div class="history-grid" id="historyGrid">
+      <div class="history-empty" id="historyEmpty">暂无历史记录</div>
+    </div>
+  </aside>
+
+</div>
+
+<nav class="bottom-nav" id="bottomNav">
+  <button class="nav-btn active" data-view="creation">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
+    <span>创作</span>
+  </button>
+  <button class="nav-btn" data-view="canvas">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+    <span>画布</span>
+  </button>
+  <button class="nav-btn" data-view="history">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    <span>历史</span>
+    <em id="navHistoryCount"></em>
+  </button>
+</nav>
+
+<div class="modal-backdrop hidden" id="settingsModal">
+  <div class="modal">
+    <div class="modal-head">
+      <span>中转站 API 设置</span>
+      <button class="icon-btn" id="closeSettingsBtn">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>中转站地址 <button class="hint-btn" title="这是什么？">?</button></label>
+        <p class="hint-text hidden">填写你的 API 中转站网址，例如 https://api.example.com。会自动补全 https:// 前缀。</p>
+        <input type="text" id="apiBase" placeholder="例如 https://api.example.com" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>API Key (密钥) <button class="hint-btn" title="这是什么？">?</button></label>
+        <p class="hint-text hidden">中转站给你的密钥，一般以 sk- 或 pst- 开头。只保存在你手机浏览器里，不会上传到别处。</p>
+        <input type="password" id="apiKey" placeholder="中转站密钥或 NovelAI Token" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>接口格式 <button class="hint-btn" title="这是什么？">?</button></label>
+        <p class="hint-text hidden">看你用的中转站支持哪种：转发 NovelAI 官方接口的选「NovelAI 官方格式」；给 /v1/images/generations 这类通用接口的选「OpenAI 兼容格式」。不确定就先试 NovelAI 格式。</p>
+        <select id="apiFormat">
+          <option value="nai">NovelAI 官方格式 (/ai/generate-image)</option>
+          <option value="openai">OpenAI 兼容格式 (/v1/images/generations)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>请求路径 (一般不用填) <button class="hint-btn" title="这是什么？">?</button></label>
+        <p class="hint-text hidden">中转站给了特殊接口地址时才填，例如 /api/draw。通常留空就行。</p>
+        <input type="text" id="apiPath" placeholder="留空使用默认路径" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>模型 <button class="hint-btn" title="这是什么？">?</button></label>
+        <p class="hint-text hidden">保存设置后自动从中转站拉取模型列表。模型多时用「搜索模型」输入关键词过滤，或点「只看绘画模型」自动识别筛选出绘画类模型；列表里没有的模型，直接在下面「自定义模型名」填模型 ID，填了以后优先生效。</p>
+        <input type="text" id="apiModelSearch" placeholder="搜索模型名，如 nai / flux / sd" autocomplete="off">
+        <div class="model-filter-row">
+          <button class="mini-btn pill" id="imageModelFilterBtn" type="button">只看绘画模型</button>
+          <span class="model-count" id="apiModelCount"></span>
+        </div>
+        <select id="apiModelSelect"></select>
+        <input type="text" id="apiModelCustom" placeholder="自定义模型名，填写后优先使用" autocomplete="off" style="margin-top:8px">
+      </div>
+      <div class="field">
+        <label>画师库地址 <button class="hint-btn" title="这是什么？">?</button></label>
+        <p class="hint-text hidden">画师串搜索用的标签库地址，默认 Danbooru 官方。连不上时可填镜像或代理地址，搜索失败会自动回退到内置离线合集。</p>
+        <input type="text" id="artistBase" placeholder="https://danbooru.donmai.us" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>视觉分析模型 (可选) <button class="hint-btn" title="这是什么？">?</button></label>
+        <p class="hint-text hidden">用于画风提取的「AI 深度分析」，与绘画模型走同一个中转站地址和密钥，只是模型不同。可搜索并选择多模态聊天模型，如 gpt-4o-mini、gemini-2.5-flash、claude 系列。留空则只用本地分析（配色/对比/明暗/细节密度），不影响生成。</p>
+        <input type="text" id="visionModelSearch" placeholder="搜索模型名，如 gpt / gemini / claude" autocomplete="off" style="margin-bottom:8px">
+        <select id="visionModelSelect"></select>
+      </div>
+      <div class="field">
+        <label>翻译模型 (可选) <button class="hint-btn" title="这是什么？">?</button></label>
+        <p class="hint-text hidden">「中→英」翻译按钮使用的聊天模型，与绘画模型走同一个中转站。建议选便宜快速的模型，如 gpt-4o-mini、gemini-2.5-flash。留空则翻译按钮提示先去设置。</p>
+        <input type="text" id="translateModelSearch" placeholder="搜索模型名，如 gpt / gemini / claude" autocomplete="off" style="margin-bottom:8px">
+        <select id="translateModelSelect"></select>
+      </div>
+      <button class="ghost-btn" id="fetchModelsBtn">重新拉取模型列表</button>
+    </div>
+    <div class="modal-foot">
+      <button class="ghost-btn" id="cancelSettingsBtn">取消</button>
+      <button class="primary-btn" id="saveSettingsBtn">保存</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="js/zip.js?v=20261110g"></script>
+<script src="js/db.js?v=20261110g"></script>
+<script src="js/api.js?v=20261110g"></script>
+<script src="js/pngmeta.js?v=20261110g"></script>
+<script src="js/artists.js?v=20261110g"></script>
+<script src="js/app.js?v=20261110g"></script>
+</body>
+</html>

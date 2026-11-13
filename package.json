@@ -1,0 +1,9 @@
+{
+  "name": "nai-relay-web",
+  "private": true,
+  "scripts": {
+    "dev": "python3 tools/serve.py",
+    "start": "python3 tools/serve.py",
+    "build": "node -e \"['js/app.js','js/api.js','js/db.js','js/zip.js','js/pngmeta.js'].forEach(f=>require('child_process').execSync('node --check '+f,{stdio:'inherit'}));console.log('build ok')\""
+  }
+}
