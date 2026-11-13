@@ -49,11 +49,11 @@
           <span>氛围转移 (Vibe Transfer) <button class="hint-btn" title="这是什么？">?</button></span>
           <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
-        <p class="hint-text hidden">上传参考图当「氛围板」：生成时 AI 会参考它的画风、色调和构图。每张图可单独调「信息提取」(从图里提取多少细节, 默认 1.00) 和「参考强度」(对画面的影响多大, 默认 0.60)。点缩略图可替换这张氛围图；氛围图自动按比例缩小到最长边 1024 后提交。V4 / V4.5 最多 5 张, V3 仅 1 张; 与图生图 / 局部重绘可叠加使用。仅 NovelAI 官方格式支持。</p>
+        <p class="hint-text hidden">上传参考图当「氛围板」：生成时 AI 会参考它的画风、色调和构图。每张图可单独调「信息提取」(从图里提取多少细节, 默认 1.00) 和「参考强度」(对画面的影响多大, 默认 0.60)。点缩略图可替换这张氛围图；氛围图自动按比例缩小到最长边 1024 后提交。V4 / V4.5 最多 4 张 (空悲切中转站上限, 官方为 5 张), V3 仅 1 张; 与图生图 / 局部重绘可叠加使用。NovelAI 原生格式直接携带氛围图; OpenAI 兼容格式会自动改走原生端点提交氛围图。</p>
         <div class="collapsible-body">
           <div class="upload-box vibe-upload" id="vibeUploadBox">
             <input type="file" id="vibeFileInput" accept="image/png, image/jpeg, image/webp" multiple class="hidden">
-            <div class="upload-empty" id="vibeUploadEmpty">点这里选图 · 拖拽 · Ctrl+V 粘贴 (最多 5 张)</div>
+            <div class="upload-empty" id="vibeUploadEmpty">点这里选图 · 拖拽 · Ctrl+V 粘贴 (最多 4 张)</div>
           </div>
           <p class="field-hint hidden" id="vibeHint"></p>
           <div id="vibeList" class="vibe-list"></div>

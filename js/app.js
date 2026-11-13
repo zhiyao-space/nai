@@ -58,7 +58,7 @@ let maskStrokes = [];
 let maskMode = "draw";
 let maskDirty = false;
 
-const VIBE_LIMIT = 5;
+const VIBE_LIMIT = 4; /* 空悲切中转站: Vibe Transfer 最多 4 张 (官方 5 张, 以中转站为准) */
 const LS_VIBES = "nai_clone_vibes";
 
 function vibeLimit() {

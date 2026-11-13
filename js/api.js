@@ -383,6 +383,11 @@ async function generateOpenai(cfg, payload, signal) {
 }
 
 async function requestGeneration(cfg, params, signal) {
+  /* 参考图通道: 中转站 OpenAI Images 端点不支持氛围转移字段,
+     带氛围图时改走 NovelAI 原生端点 {base}/v1/ai/generate-image */
+  if (cfg.format === "openai" && (params.vibes || []).some((v) => v && v.b64)) {
+    return generateNai(cfg, buildNaiPayload(params), signal);
+  }
   const payload = cfg.format === "openai" ? buildOpenAiPayload(params) : buildNaiPayload(params);
   return cfg.format === "openai" ? generateOpenai(cfg, payload, signal) : generateNai(cfg, payload, signal);
 }
