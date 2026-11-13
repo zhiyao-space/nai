@@ -1,0 +1,138 @@
+# WebSearch 完整正文
+# query: NovelAI "Precise Reference" 图像生成 精准参考 功能 V4.5 reference type fidelity strength
+# index: 4
+
+# Stable Diffusion基础：ControlNet之图片高仿-CSDN博客
+
+url: https://blog.csdn.net/everly_/article/details/138605239
+
+article_title: Stable Diffusion基础：ControlNet之图片高仿
+
+time: 
+
+---
+
+![WechatIMG595.jpeg](https://img-blog.csdnimg.cn/img_convert/61a8e40c554d04774cab2dc9a61e3159.webp?x-oss-process=image/format,png) 今天继续给大家分享AI绘画中 ControlNet 的强大功能，本次的主角是 Reference，它可以参考一张图片生成另一张看起来差不多的图片，这句话说起来有点绕，如果换成高仿，大家应该就明白了吧。我们将通过几个实例来加深体会，比如照片转二次元风格、名画改造、AI减肥成功图片制作、绘本小故事制作等。
+
+还有之前看很多文章说，Reference 可以一定程度上代替 Lora，真的是这样吗？今天也来一探究竟。
+
+### ControlNet
+
+工欲善其事必先利其器，你需要先安装好 ControlNet，并对它的使用有一个基本的了解。
+
+### 基本使用
+
+我这里有一张提前生成好的美女图片，现在就用她来实测 Reference 的控制效果。
+
+![](https://img-blog.csdnimg.cn/img_convert/1d72125acddfe5fe07b283c5bb16f162.webp?x-oss-process=image/format,png)
+
+下面开始生成：
+
+首先是选择一个大模型，这里使用的是和上面生成图片相同的模型：realisticVisionV20；
+
+然后我们填写一些简单的提示词，以免出现一些不太方便的图。这里故意没有使用生成参考图片时的提示词，因为提示词会影响出图效果，就看不出来 Reference 的复刻效果了。
+
+![](https://img-blog.csdnimg.cn/img_convert/c8f2be54ad04fb95c0eb5081364ad5ea.webp?x-oss-process=image/format,png)
+
+这是我的一些模型生成参数，大家可以参考，没必要完全按照这个来。
+
+![](https://img-blog.csdnimg.cn/img_convert/e7302b61179b8c66ddefeb95acee8cbd.webp?x-oss-process=image/format,png)
+
+最最重要的就是 ControlNet 的设置，如下图所示：
+
+* 上传参考图片
+* 启用 ControlNet
+* 勾选完美匹配像素
+* 选择 Reference
+
+![](https://img-blog.csdnimg.cn/img_convert/5296d79ee8396d5e8c95b0c0cdab53a0.webp?x-oss-process=image/format,png)
+
+注意这个 ControlNet 只有一个预处理器，它可以从参考图中提取图片的特征信息，用于生成控制。
+
+Reference 还有一个 Style Fidelity 参数，翻译过来就是风格忠实度，越小越接近使用的大模型的风格，越大越接近参考图的风格，但是越大可能出现图片崩坏的情况，0\.5是个平衡值。
+
+![](https://img-blog.csdnimg.cn/img_convert/1acb0387d63926018017bab7537977c6.webp?x-oss-process=image/format,png)
+
+然后就可以生图了，看一下效果：
+
+![](https://img-blog.csdnimg.cn/img_convert/f6e0a91ffff56abddc0b5c61fd134232.webp?x-oss-process=image/format,png)
+
+以我个人的眼光，只能说：人物的形态、整体构图是复制出来了，但是气质还是差那么一点的。
+
+### 局部绘制
+
+很多分享 Reference 技术的文章还提到，Reference 可以起到一定的 Inpaint 效果，那么这里也来看下效果如何。这里的局部重绘是通过提示词发生作用的，下面是几个例子：
+
+**裙子变成黑色** ：1girl, white shirt, ((black skirt))，提示词权重要高一些，否则不容易扭转过来。人物姿态和背景都没啥大变化，裙子也变成了黑色，只是有一张用力过猛，上衣颜色也变了。
+
+![](https://img-blog.csdnimg.cn/img_convert/b1c81b51d8d5fef46644475f139fd4c0.webp?x-oss-process=image/format,png)
+
+**黑发变成金色** ：1girl, white shirt and dress, ((golden hair))。人物姿态和背景都没啥大变化，头发变成金色的了，人脸也没变成外国人。
+
+![](https://img-blog.csdnimg.cn/img_convert/48bad1965cca07ea472c1c9827a86a2b.webp?x-oss-process=image/format,png)
+
+**把背景换成公园** ：1girl, white shirt and dress, ((the background is park))。背景更换成功，同时人物姿态和衣服颜色都没啥大变化。
+
+![](https://img-blog.csdnimg.cn/img_convert/8ef4b8148a56905b473066d0f226aa79.webp?x-oss-process=image/format,png)
+
+### 不同模型
+
+上边的参考图片和生成图片使用的是同一个大模型，测试结果难免会有说服力不够的问题，下图是我使用三个模型做的对比测试，每个模型使用 Reference 生成两张图片。
+
+提示词还是这个：1girl, white shirt and dress, 其它参数都保持不变。
+
+![](https://img-blog.csdnimg.cn/img_convert/87d554ad03ef1155c7bd067a586e266f.webp?x-oss-process=image/format,png)
+
+可以看到，人物的形态、背景、色彩搭配等都被迁移到了新生成的图片中，当然这些图片也还会受到基础模型的很大影响，渲染的笔触、人物的五官都受到模型的紧密约束。
+
+到这一步，你能说 Reference 是 Lora 吗？它能代替 Lora 吗？我认为它们是有很大的不同的。Reference 只是仿制参考图，从参考图提取特征，绘图还是大模型在处理。Reference 的效果可以称为高仿，在图片处理工具中有一个功能和它很像，那就是仿制图章。
+
+### 控制参数
+
+Reference还有一些控制参数，这里给大家看下效果。
+
+为了方便演示，我这里专门生成了一张连环画风格的图片作为参考图：
+
+![](https://img-blog.csdnimg.cn/img_convert/d382149e8a4b7cc6d6a8febbc9542fe6.webp?x-oss-process=image/format,png)
+
+然后生成图片的大模型选择的是二次元模型 AnythingV5。
+
+#### Style Fidelity
+
+![](https://img-blog.csdnimg.cn/img_convert/df430e218a3f8d6e584e9eae615eae33.webp?x-oss-process=image/format,png)
+
+值为 1 的效果：色彩更偏重参考图。
+
+![](https://img-blog.csdnimg.cn/img_convert/db344ae9025dc964536973248d1197b1.webp?x-oss-process=image/format,png)
+
+值为 0 的效果：色彩更偏重模型。
+
+![](https://img-blog.csdnimg.cn/img_convert/6d127f33a4e6dde49680b1d44cbbdc0f.webp?x-oss-process=image/format,png)
+
+#### 预处理器
+
+![](https://img-blog.csdnimg.cn/img_convert/9810c16a7257d0055a75c07cf335c05b.webp?x-oss-process=image/format,png)
+
+这里有三个预处理器：
+
+* Reference only：生成与参考图类似的风格和脸部。
+* Reference adain：使用 AdaIN 风格迁移算法，结果可能偏离参考图；
+* Reference adain\+attn：综合 only 和 adain 方法。
+
+Reference only 我们已经看过了，分别看下另外两个的效果。
+
+**Reference adain** ：确实更接近模型，颜色和脸型的变化特别明显，更加偏重 Anything 的二次元风格。
+
+![](https://img-blog.csdnimg.cn/img_convert/0506a3e96dc6ade300128a17614c45d1.webp?x-oss-process=image/format,png)
+
+**Reference adain\+attn** ：介于模型风格和参考图风格之间。
+
+![](https://img-blog.csdnimg.cn/img_convert/333735750a4b8fba53447df3a4bc829d.webp?x-oss-process=image/format,png)
+
+### 用途示例
+
+#### 风格转绘
+
+比如各大短视频平台比较流行的照片转动漫风格，可以在“图生图”中上传一张真实照片，然后使用动漫风格的大模型加上 Reference 进行重绘。下图的效果，提示词只要一个简单的：1girl，重绘强度控制在0\.4以下即可。
+
+![](https://img-blog.csdnimg.cn/img_convert/10d1c1cf295a9f34cbc5515961b256d5.webp?x-oss...

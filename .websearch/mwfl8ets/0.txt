@@ -1,0 +1,111 @@
+# WebSearch 完整正文
+# query: NovelAI "Precise Reference" 图像生成 精准参考 功能 V4.5 reference type fidelity strength
+# index: 1
+
+MCP 服务器，为美术 Agent 提供 NovelAI 图像生成能力。V5 使用官方图像 API，旧版模型保留  novelai-python  SDK 路径。
+V5 扩展（当前源码）
+支持  v5-full  与  v5-curated 。新增  generate_reference （V4.5 人物/风格参考、V5/V4.5 图生图、Full/V4.5 局部重绘）、 generate_v5 （文生图、图生图、Full 局部重绘、SSE）、 upscale_v5 、 suggest_tags_v5 、 prepare_image_v5 、 inspect_image_v5 、 account_v5 、 v5_capabilities 、 v5_parameter_schema 。 调用前读取能力说明；完整参数、图像输入、各角色正负描述与坐标均可配置。两个模型的局部重绘 infill 已实测不支持；当前 V5 也未开放 Vibe Transfer / Precise Reference。 详见 覆盖与真实验收。本轮 V5 代码尚未发布到 PyPI，以下 uvx 安装仍可能得到旧版本；新功能请从本仓库源码运行。
+✨ 功能
+工具
+说明
+generate_image 文生图，支持多角色定位、Vibe Transfer、Precise Reference
+img2img 图生图，基于已有图片变换
+suggest_tags Danbooru 标签搜索/自动补全
+check_subscription 查询订阅状态和 Anlas 余额
+旧版工具支持模型
+名称
+模型 ID
+说明
+v4.5-full nai-diffusion-4-5-full 旧版工具默认模型
+v4.5-curated nai-diffusion-4-5-curated 更干净的数据集
+v4-full nai-diffusion-4-full V4 Full
+v4-curated nai-diffusion-4-curated-preview V4 预览
+v3 nai-diffusion-3 V3（老款）
+     快速开始
+前置条件
+Python 3.11+
+NovelAI API Key（以  pst-  开头，从  novelai.net  获取）
+方式一：通过 PyPI 安装（推荐）
+BASH
+1 2 3 4 5
+# 使用 uvx 直接运行（无需手动安装） NOVELAI_API_KEY=pst-xxx uvx novelai-mcp # 或者用 pip 安装 pip install novelai-mcp NOVELAI_API_KEY=pst-xxx novelai-mcp
+方式二：从源码安装
+BASH
+1 2 3 4 5 6 7
+# 克隆项目 git clone https://github.com/hesoyamlp1/MCP-NovelAI.git cd MCP-NovelAI # 使用 uv 安装依赖 uv sync # 运行 NOVELAI_API_KEY=pst-xxx uv run novelai-mcp
+运行选项
+BASH
+1 2 3 4 5 6 7 8
+# Stdio 模式（默认，Claude Desktop / Antigravity / Cursor） NOVELAI_API_KEY=pst-xxx novelai-mcp # HTTP 模式（LobeChat / Dify） NOVELAI_API_KEY=pst-xxx novelai-mcp --transport streamable-http --port 3000 # 或者使用 .env 文件 cp .env.example .env # 编辑 .env 填入你的 API Key novelai-mcp
+调试
+BASH
+1 2
+# 使用 MCP Inspector uvx mcp dev src/novelai_mcp/server.py
+     接入配置
+Claude Desktop / Antigravity / Cursor
+通过 PyPI（推荐）：
+JSON
+1 2 3 4 5 6 7 8 9 10 11
+{ "mcpServers" : { "novelai" : { "command" : "uvx" , "args" : [ "novelai-mcp" ] , "env" : { "NOVELAI_API_KEY" : "pst-xxx" } } } }
+从源码：
+JSON
+1 2 3 4 5 6 7 8 9 10 11
+{ "mcpServers" : { "novelai" : { "command" : "uv" , "args" : [ "run" , "--directory" , "/path/to/MCP-NovelAI" , "novelai-mcp" ] , "env" : { "NOVELAI_API_KEY" : "pst-xxx" } } } }
+LobeChat / Dify
+启动 HTTP 模式后，在客户端配置：
+URL :  http://localhost:3000/mcp
+传输 : Streamable HTTP
+     环境变量
+变量
+必需
+说明
+NOVELAI_API_KEY ✅ NovelAI API Key
+NOVELAI_SAVE_DIR ❌ 图片自动保存目录
+HTTPS_PROXY ❌ HTTPS 代理地址
+     许可证
+MIT
+相关推荐
+Playwright MCP 浏览器自动化服务
+By microsoft
+Playwright MCP 是一个提供浏览器自动化能力的模型上下文协议（MCP）服务，通过结构化可访问性快照让大语言模型无需视觉模型即可操控网页，适用于智能体网页交互、自动化测试与长时间浏览器任务编排等场景。
+A - 优质
+本地部署
+可托管
+2026.10.09
+134
+实时网络搜索服务
+By perplexityai
+一个集成Sonar API的MCP服务器实现，为Claude提供无与伦比的实时全网研究能力。
+A - 优质
+本地部署
+实时搜索
+2025.04.28
+36
+Excel工作簿读写编辑MCP服务器
+By haris-musa
+Excel MCP服务器是一个模型上下文协议服务，让AI助手无需安装Microsoft Excel即可创建、读取、编辑和格式化Excel工作簿，适用于AI驱动的办公自动化与数据管理场景。
+A - 优质
+混合部署
+MCP服务器
+2026.10.10
+21
+多模态生成API服务
+By MiniMax-AI
+MiniMax提供的多模态生成API服务，支持文本转语音、语音克隆、视频生成、图像生成等功能，适用于内容创作、媒体制作等场景。
+A - 优质
+本地部署
+文本转语音
+2025.07.08
+19
+arXiv 论文检索 MCP 服务器
+By blazickjp
+arxiv-mcp-server 是一款本地部署的 MCP 服务器，为 AI 代理和研究人员提供 arXiv 论文搜索、按章节读取原始 LaTeX、导出 BibTeX、跟踪主题更新与本地论文库管理能力，适用于文献调研、论文精读和引用梳理等工作流。
+A - 优质
+混合部署
+MCP服务器
+2026.10.08
+13
+移动开发与自动化 MCP 服务器
+By mobile-next
+Mobile MCP 是一款用于移动开发与自动化的 MCP 服务器，通过统一接口操控 iOS/Android 模拟器、仿真器和真机，支持设备控制、屏幕交互、应用管理等能力，可帮助 AI 代理完成移动应用测试、数据录入和多步骤用户流程。
+2026.10.09

@@ -1,0 +1,108 @@
+# WebSearch 完整正文
+# query: NovelAI "Precise Reference" 图像生成 精准参考 功能 V4.5 reference type fidelity strength
+# index: 3
+
+# 亚马逊 BedRock 生成式人工智能（二）
+
+在本章中，我们将探讨使用 Amazon Bedrock 生成和总结文本的架构模式。您将了解文本生成的应用以及文本生成如何与 Amazon Bedrock 合作。然后，我们将使用一些提示工程技术，包括上下文提示和 LangChain 的编排。之后，我们将探索使用短文本/文件进行文本摘要、总结长篇文章和书籍，并发现文本摘要的使用案例和模式。到本章结束时，您将能够理解和实现使用 Amazon Bedro
+
+原文：
+
+`zh.annas-archive.org/md5/135d60e8e373a747ba1020367cf7a0bb`译者：飞龙
+
+
+## 第六章：使用 Amazon Bedrock 生成和总结文本
+
+在本章中，我们将探讨使用 Amazon Bedrock 生成和总结文本的架构模式。您将了解文本生成的应用以及文本生成如何与 Amazon Bedrock 合作。然后，我们将使用一些提示工程技术，包括上下文提示和 LangChain 的编排。之后，我们将探索使用短文本/文件进行文本摘要、总结长篇文章和书籍，并发现文本摘要的使用案例和模式。
+
+到本章结束时，您将能够理解和实现使用 Amazon Bedrock 在实际用例中的文本生成和总结。
+
+本章将涵盖以下关键主题：
+
+- 生成文本 
+- 总结文本 
+- 创建安全的无服务器解决方案 
+
+## 技术要求
+
+本章要求您拥有 AWS 账户访问权限。如果您还没有，可以访问 `aws.amazon.com/getting-started/` 并创建一个。
+
+其次，您需要安装和配置 AWS CLI (`aws.amazon.com/cli/`)。您将使用它从您的本地机器访问 Amazon Bedrock FMs。由于我们将要执行的多数代码单元都是基于 Python 的，此时设置 AWS Python SDK (Boto3) (`docs.aws.amazon.com/bedrock/latest/APIReference/welcome.html`) 将非常有帮助。您可以通过任何方式执行 Python 设置：在您的本地机器上安装它，使用 AWS Cloud9，利用 AWS Lambda，或者利用 Amazon SageMaker。如果您使用带有 AWS Python SDK 的 Jupyter Notebook 与 Amazon Bedrock 交互，请确保在笔记本中运行以下代码单元以导入必要的库并创建 Bedrock 运行时客户端：
+
+```
+#Ensure you have the latest version of boto3 & langchain
+!pip install -U boto3 langchain-community
+#import the main packages and libraries
+import boto3
+import json
+#Create bedrock runtime client
+bedrock_client = boto3.client('bedrock-runtime') #Select the desired region
+```
+注意
+
+调用和定制 Amazon Bedrock 的 FMs 将产生相关费用。请参阅 `aws.amazon.com/bedrock/pricing/` 了解更多信息。
+
+## 生成文本
+
+文本生成在各个领域都发挥着至关重要的作用，从市场营销和广告到新闻业和创意写作。这种技术的意义在于其能够简化内容创作流程，提高生产力，并开启新的创意领域。
+
+文本生成的一个关键优势是其能够节省宝贵的时间和资源。传统的内容创作方法可能耗时且劳动密集，通常需要大量的研究、写作和编辑工作。但通过使用生成式 AI 模型，企业和个人可以快速生成初稿、大纲或完整的内容，从而为其他任务腾出宝贵的时间。
+
+此外，文本生成赋予内容创作者探索新的叙事途径和拓展其创造力的边界。通过提供起点或框架，这些工具可以激发新想法，并促进非传统叙事技巧或独特写作风格的探索。这种能力在原创性和独特性被高度重视的行业中尤其有价值，例如小说写作、广告活动或品牌故事讲述计划。
+
+除了创意应用外，文本生成在需要大量信息和事实性内容的领域也具有巨大的潜力。例如，新闻报道、科学出版物、技术文档和文本生成可以帮助快速传播准确和最新的信息。通过利用庞大的数据存储库和专业知识，这些工具可以生成全面的报告、摘要或文章，确保相关信息能够迅速提供给目标受众。
+
+此外，文本生成提供了令人兴奋的个性化和定制机会。通过分析用户偏好、人口统计信息和上下文数据，这些工具可以定制内容，使其与特定目标受众产生共鸣，增强参与度并加强与读者或客户的联系。
+
+让我们详细看看文本生成在现实世界中的应用。
+
+### 文本生成应用
+
+虽然文本生成的应用无限，以下是一些示例以供参考：
+
+- **生成产品描述** ：Amazon Bedrock 的文本生成能力可以被用于为营销团队自动化创建产品描述。通过输入产品的特性、规格和关键优势，FM 可以生成引人入胜且 SEO 优化的描述，突出产品的独特卖点。这可以显著简化创建产品描述的过程，为营销团队节省时间和资源。生成的描述可以根据不同的目标受众、语气和风格偏好进行定制，确保在各种渠道上保持一致且引人入胜的品牌声音。此外，FM 可以定制现有的产品描述，使其能够学习和模仿期望的写作风格和格式。 
+- **媒体文章和营销活动生成** ：Amazon Bedrock 的文本生成能力可用于创建媒体文章、博客文章和营销活动的高质量内容。通过提供相关信息、数据和指南，FM 可以生成结构良好且连贯的文章，可用于内容营销、思想领导或新闻传播。FM 可以在现有内容上进行训练，使其能够理解和模仿特定出版物或品牌的语气、风格和格式偏好。它还可以为营销活动生成吸引注意力的标题、引人入胜的引言和引人注目的 **行动号召** （CTAs）。
+- **个性化电子邮件和消息撰写** ：Amazon Bedrock 可用于撰写个性化的电子邮件、消息和其他书面沟通，用于客户联系、营销活动，甚至内部沟通。通过利用客户数据和偏好，FM 可以生成高度定制和引人入胜的内容，提升客户体验并增加品牌忠诚度。
+- **医疗保健** ：临床文档是医疗保健的一个关键方面，但它可能耗时且容易出错。Bedrock 可以通过根据患者接触期间的对话或口述生成准确和全面的临床笔记来协助医疗保健专业人员简化笔记和文档过程。Amazon 还提供另一种名为*AWS HealthScribe* 的服务，该服务由 Amazon Bedrock 提供支持，专门为此目的而设计。要了解更多关于 AWS HealthScribe 的信息，请访问`aws.amazon.com/healthscribe/`。Bedrock 可用于生成针对个人独特健康状况、生活方式和偏好的个性化健康和福祉建议。通过分析来自各种来源的数据，例如 **电子健康记录** （EHRs）、可穿戴设备和自我报告信息，Bedrock 可以提供针对饮食、锻炼、压力管理和预防保健的定制建议。
+
+### Amazon Bedrock 文本生成系统
+
+如果您已经阅读了前面的章节，您可能已经尝试在 Amazon Bedrock 上生成文本。但为了提醒，一个简单的文本生成系统看起来是这样的：
+
+https://github.com/OpenDocCN/freelearn-dl-zh/raw/master/docs/genai-amzn-rdrk/img/B22045_06_01.jpg
+
+图 6.1 – 简单文本生成系统
+
+您向模型提供提示并说类似于“为客服团队撰写一封电子邮件”的话。即使您没有提供任何上下文，模型也会为您生成一个示例电子邮件（如图*6.2* 所示）：
+
+https://github.com/OpenDocCN/freelearn-dl-zh/raw/master/docs/genai-amzn-rdrk/img/B22045_06_02.jpg
+
+图 6.2 – 生成电子邮件
+
+在您的 Jupyter Notebook 环境中使用 AWS Python SDK，运行以下示例脚本以调用 AI21 Jurassic 模型。请确保您首先导入必要的库并创建 Bedrock 运行时客户端，如*技术要求* 部分所述：
+
+```
+prompt_data = """Human: Compose an email to a customer support team.
+Assistant:
+"""
+body = json.dumps({"prompt": prompt_data, "maxTokens": 200})
+modelId = "ai21.j2-mid-v1"  # change this to use a different version from the model provider
+accept = «application/json»
+contentType = «application/json»
+response = bedrock_client.invoke_model(body=body, modelId=modelId, accept=accept, contentType=contentType)
+response_body = json.loads(response.get("body").read())
+print(response_body.get("completions")[0].get("data").get("text"))
+```
+现在，根据您选择的模型，响应的结构和输出可能会有所不同。*图 6.3* 显示了 AI21 Jurassic 模型的响应：
+
+https://github.com/OpenDocCN/freelearn-dl-zh/raw/master/docs/genai-amzn-rdrk/img/B22045_06_03.jpg
+
+图 6.3 – AI21 Jurassic 输出
+
+在这里，我们提供了一个简单的提示，没有提供任何上下文或信息。现在，让我们继续探讨文本生成的先进架构模式，并了解上下文提示。
+
+### 使用提示工程生成文本
+
+在上一节中，我们查看了一种文本生成模式，我们没有向模型提供任何上下文或信息。让我们使用我们在 *第三章*  中了解到的某些提示工程技巧：
+
+- **零样本上下文提示** ：在这里，我们将以零样本的方式在提示中提供详细上下文：`prompt = """``Human: Write a descriptive and engaging travel guide section about a lesser-known but beautiful destination, capturing the local culture, cuisine, and must-see attractions in a way that inspires wanderlust.``Assistant:"""``body = json.dumps({"prompt": prompt,"max_tokens_to_sample": 500})``modelId = "anthropic.claude-v2" # change this to use a different version from the model provider``accept = «application/json»``contentType = «application/json»``response = bedrock_runtime.invoke_model(body=body, modelId=modelId, accept=accept, contentType=con
