@@ -7,6 +7,7 @@
 - 纯前端 SPA：index.html + css/style.css + js/{api,app,db,zip,pngmeta}.js，无构建步骤
 - js/api.js 负责构建 NovelAI 官方 payload（V4: v4_prompt/characterPrompts/reference_*_multiple；V3: uc/reference_image 单值）与 OpenAI 兼容 payload
 - 氛围图（vibes）持久化在 localStorage（超配额静默失败），生成历史在 IndexedDB（js/db.js）
+- 「画风锁定」按用户文档实现：PNG 元数据（js/pngmeta.js readPngMetadata + commentToMeta）→ 命名预设存 localStorage（nai_vibe_presets_v1 / nai_vibe_active_id）→ generate() 里 applyVibePreset() 注入（画师串前置拼接 prompt，seed/scale/steps/cfgRescale/sampler 覆盖，negative 仅在用户留空时注入），不依赖中转站的氛围转移字段
 - 上传的参考图统一经 downscaleToMax 缩到最长边 1024 再转 base64
 
 ## What Didn't Work

@@ -62,6 +62,54 @@
 
       <section class="card collapsible open" data-collapsible>
         <div class="card-title clickable" data-collapse-toggle>
+          <span>氛围转移 · 画风锁定 (PNG 元数据) <button class="hint-btn" title="这是什么？">?</button></span>
+          <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <p class="hint-text hidden">上传一张 NAI 生成的 PNG，自动读取它内嵌的画风参数（画师串、负向提示词、Seed、CFG、步数、采样器），保存为画风预设。启用预设后每次生图自动把画师串拼接到提示词前面、参数注入请求体，画风全程锁定——不依赖中转站的氛围转移参数。只有 NAI 出的 PNG 带元数据；提取失败可在「手动微调」里手动画师串。</p>
+        <div class="collapsible-body">
+          <div class="upload-box" id="vibePresetUpload">
+            <input type="file" id="vibePresetFile" accept="image/png" class="hidden">
+            <div class="upload-empty">点这里 / 拖拽 PNG 到这里，提取画风参数</div>
+          </div>
+          <div id="vibeExtractResult" class="vibe-result hidden">
+            <p class="vibe-result-badge">已提取画风参数</p>
+            <div class="vibe-param-grid">
+              <div><em>画师串</em><span id="vveArtists"></span></div>
+              <div><em>负向提示词</em><span id="vveNegative"></span></div>
+              <div><em>Seed</em><span id="vveSeed"></span></div>
+              <div><em>Scale (CFG)</em><span id="vveScale"></span></div>
+              <div><em>步数</em><span id="vveSteps"></span></div>
+              <div><em>采样器</em><span id="vveSampler"></span></div>
+            </div>
+          </div>
+          <div class="preset-actions">
+            <button class="mini-btn" id="vibeSavePresetBtn" type="button">保存为画风预设</button>
+            <button class="mini-btn" id="vibeTweakBtn" type="button">手动微调</button>
+          </div>
+          <div id="vibeTweakPanel" class="vibe-tweak hidden">
+            <input type="text" id="vibePresetName" placeholder="预设名称，如：清新水彩">
+            <input type="text" id="vibeArtists" placeholder="画师串，如 artist:wlop, artist:miv4t（可只保留画师串）">
+            <input type="text" id="vibeStyleTags" placeholder="额外风格词（可选），如 flat color, soft lighting">
+            <input type="text" id="vibeNegative" placeholder="负向提示词（可选）">
+            <div class="vibe-tweak-grid">
+              <input type="text" id="vibeSeed" placeholder="Seed">
+              <input type="text" id="vibeScale" placeholder="Scale (CFG)">
+              <input type="text" id="vibeSteps" placeholder="步数">
+              <input type="text" id="vibeCfg" placeholder="CFG 残差">
+              <input type="text" id="vibeSampler" placeholder="采样器">
+            </div>
+            <div class="preset-actions">
+              <button class="mini-btn" id="vibeSaveTweakedBtn" type="button">保存为新预设</button>
+              <button class="mini-btn" id="vibeTweakResetBtn" type="button">还原为提取结果</button>
+            </div>
+          </div>
+          <div class="vibe-preset-head">画风预设 <span class="preset-status hidden" id="vibePresetStatus"></span></div>
+          <div id="vibePresetList" class="vibe-preset-list"></div>
+        </div>
+      </section>
+
+      <section class="card collapsible open" data-collapsible>
+        <div class="card-title clickable" data-collapse-toggle>
           <span>多角色设定 (角色提示词) <button class="hint-btn" title="这是什么？">?</button></span>
           <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
         </div>

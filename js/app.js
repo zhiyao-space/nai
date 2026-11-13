@@ -1000,6 +1000,253 @@ function updateVibeHints() {
   hint.classList.toggle("hidden", !msgs.length);
 }
 
+function uid() {
+  return (crypto.randomUUID && crypto.randomUUID()) || "id-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8);
+}
+
+/* ---------- 氛围转移: 画风预设 (PNG 元数据方案) ---------- */
+
+const LS_VIBE_PRESETS = "nai_vibe_presets_v1";
+const LS_VIBE_ACTIVE = "nai_vibe_active_id";
+let vibePresets = [];
+let lastVibeExtract = null;
+
+function loadVibePresets() {
+  try {
+    const a = JSON.parse(localStorage.getItem(LS_VIBE_PRESETS) || "null");
+    if (Array.isArray(a)) vibePresets = a.filter((x) => x && x.name);
+  } catch (e) { vibePresets = []; }
+}
+
+function saveVibePresets() {
+  try { localStorage.setItem(LS_VIBE_PRESETS, JSON.stringify(vibePresets)); } catch (e) {}
+}
+
+function getActiveVibePreset() {
+  const id = localStorage.getItem(LS_VIBE_ACTIVE);
+  if (!id) return null;
+  return vibePresets.find((s) => s.id === id) || null;
+}
+
+function extractArtistsFromPrompt(prompt) {
+  return (((prompt || "").match(/artist:[^\s,，]+/gi)) || []).join(", ");
+}
+
+function activeVibeName() {
+  const vp = getActiveVibePreset();
+  return vp ? vp.name : "";
+}
+
+async function handleVibePresetFile(file) {
+  if (!file) return;
+  try {
+    const meta = commentToMeta(await readPngMetadata(file));
+    if (!meta || (!meta.prompt && meta.seed == null)) {
+      toast("这张图片没有内嵌 NAI 生成参数。只有 NAI 出的 PNG 带元数据，可在下方「手动微调」里手动填写画师串", "warn", 6000);
+      return;
+    }
+    lastVibeExtract = {
+      artists: extractArtistsFromPrompt(meta.prompt),
+      styleTags: "",
+      negative: meta.negative || "",
+      seed: meta.seed != null ? String(meta.seed) : "",
+      scale: meta.scale != null ? String(meta.scale) : "",
+      steps: meta.steps != null ? String(meta.steps) : "",
+      cfgRescale: meta.cfgRescale != null ? String(meta.cfgRescale) : "",
+      sampler: meta.sampler || ""
+    };
+    renderVibeExtractResult();
+    fillVibeTweakForm(lastVibeExtract);
+    toast("已提取内嵌画风参数，可保存为画风预设", "ok", 4500);
+  } catch (e) {
+    toast("读取图片失败: " + (e.message || e), "error");
+  }
+}
+
+function renderVibeExtractResult() {
+  const box = $("vibeExtractResult");
+  if (!lastVibeExtract) {
+    box.classList.add("hidden");
+    return;
+  }
+  $("vveArtists").textContent = lastVibeExtract.artists || "（未检测到画师串）";
+  $("vveNegative").textContent = lastVibeExtract.negative ? lastVibeExtract.negative.slice(0, 60) + (lastVibeExtract.negative.length > 60 ? "…" : "") : "（无）";
+  $("vveSeed").textContent = lastVibeExtract.seed || "（无）";
+  $("vveScale").textContent = lastVibeExtract.scale || "（无）";
+  $("vveSteps").textContent = lastVibeExtract.steps || "（无）";
+  $("vveSampler").textContent = lastVibeExtract.sampler || "（无）";
+  box.classList.remove("hidden");
+}
+
+function fillVibeTweakForm(vp) {
+  $("vibeArtists").value = vp.artists || "";
+  $("vibeStyleTags").value = vp.styleTags || "";
+  $("vibeNegative").value = vp.negative || "";
+  $("vibeSeed").value = vp.seed || "";
+  $("vibeScale").value = vp.scale || "";
+  $("vibeSteps").value = vp.steps || "";
+  $("vibeCfg").value = vp.cfgRescale || "";
+  $("vibeSampler").value = vp.sampler || "";
+}
+
+function readVibeTweakForm() {
+  return {
+    artists: $("vibeArtists").value.trim(),
+    styleTags: $("vibeStyleTags").value.trim(),
+    negative: $("vibeNegative").value.trim(),
+    seed: $("vibeSeed").value.trim(),
+    scale: $("vibeScale").value.trim(),
+    steps: $("vibeSteps").value.trim(),
+    cfgRescale: $("vibeCfg").value.trim(),
+    sampler: $("vibeSampler").value.trim()
+  };
+}
+
+function saveVibePresetFromForm() {
+  const name = $("vibePresetName").value.trim();
+  if (!name) {
+    toast("请先填写预设名称", "warn");
+    return;
+  }
+  const vp = { id: uid(), name, createdAt: Date.now(), ...readVibeTweakForm() };
+  vibePresets.unshift(vp);
+  saveVibePresets();
+  localStorage.setItem(LS_VIBE_ACTIVE, vp.id);
+  renderVibePresets();
+  toast(`画风预设「${name}」已保存并启用`, "ok");
+}
+
+function deleteVibePreset(id) {
+  const vp = vibePresets.find((s) => s.id === id);
+  if (!vp) return;
+  if (!confirm(`删除画风预设「${vp.name}」？`)) return;
+  vibePresets = vibePresets.filter((s) => s.id !== id);
+  saveVibePresets();
+  if (localStorage.getItem(LS_VIBE_ACTIVE) === id) localStorage.removeItem(LS_VIBE_ACTIVE);
+  renderVibePresets();
+}
+
+function renameVibePreset(id) {
+  const vp = vibePresets.find((s) => s.id === id);
+  if (!vp) return;
+  const name = prompt("重命名画风预设", vp.name);
+  if (!name || !name.trim() || name.trim() === vp.name) return;
+  vp.name = name.trim();
+  saveVibePresets();
+  renderVibePresets();
+}
+
+function toggleVibePreset(id) {
+  if (localStorage.getItem(LS_VIBE_ACTIVE) === id) {
+    localStorage.removeItem(LS_VIBE_ACTIVE);
+    toast("已停用画风预设", "ok");
+  } else {
+    localStorage.setItem(LS_VIBE_ACTIVE, id);
+    const vp = getActiveVibePreset();
+    toast(vp ? `已启用画风预设「${vp.name}」，生成时自动注入画风参数` : "已启用画风预设", "ok");
+  }
+  renderVibePresets();
+}
+
+function renderVibePresets() {
+  const list = $("vibePresetList");
+  const status = $("vibePresetStatus");
+  const active = getActiveVibePreset();
+  list.innerHTML = "";
+  status.textContent = active ? `启用中：${active.name}` : "";
+  status.classList.toggle("hidden", !active);
+  if (!vibePresets.length) {
+    list.innerHTML = '<div class="vibe-preset-empty">还没有预设：上传 NAI 的 PNG 提取，或手动微调后保存</div>';
+    return;
+  }
+  vibePresets.forEach((vp) => {
+    const card = document.createElement("div");
+    card.className = "vibe-preset-card" + (active && active.id === vp.id ? " active" : "");
+
+    const name = document.createElement("span");
+    name.className = "vibe-preset-name";
+    name.textContent = vp.name;
+    name.title = "点击启用 / 停用该预设";
+    name.addEventListener("click", () => toggleVibePreset(vp.id));
+    card.appendChild(name);
+
+    const desc = document.createElement("span");
+    desc.className = "vibe-preset-desc";
+    desc.textContent = [vp.artists, vp.styleTags].filter(Boolean).join(", ").slice(0, 40) || "纯参数预设";
+    desc.title = desc.textContent;
+    card.appendChild(desc);
+
+    const rn = document.createElement("button");
+    rn.className = "icon-btn sm";
+    rn.title = "重命名";
+    rn.textContent = "✎";
+    rn.addEventListener("click", (e) => { e.stopPropagation(); renameVibePreset(vp.id); });
+    card.appendChild(rn);
+
+    const del = document.createElement("button");
+    del.className = "icon-btn sm";
+    del.title = "删除";
+    del.textContent = "✕";
+    del.addEventListener("click", (e) => { e.stopPropagation(); deleteVibePreset(vp.id); });
+    card.appendChild(del);
+
+    list.appendChild(card);
+  });
+}
+
+function applyVibePreset(p) {
+  const vp = getActiveVibePreset();
+  if (!vp) return;
+  const front = [vp.artists, vp.styleTags].filter((x) => x && x.trim()).join(", ");
+  if (front) p.prompt = [front, p.prompt.trim()].filter(Boolean).join(", ");
+  if (vp.negative && vp.negative.trim() && !p.negative.trim()) p.negative = vp.negative.trim();
+  if (vp.seed !== "" && vp.seed != null && !isNaN(+vp.seed)) p.seed = +vp.seed;
+  if (vp.scale && !isNaN(+vp.scale)) p.scale = +vp.scale;
+  if (vp.steps && !isNaN(+vp.steps)) p.steps = +vp.steps;
+  if (vp.cfgRescale && !isNaN(+vp.cfgRescale)) p.cfgRescale = +vp.cfgRescale;
+  if (vp.sampler && vp.sampler.trim()) p.sampler = vp.sampler.trim();
+}
+
+function bindVibePresets() {
+  loadVibePresets();
+  const box = $("vibePresetUpload");
+  const input = $("vibePresetFile");
+  box.addEventListener("click", () => input.click());
+  input.addEventListener("change", () => {
+    const f = input.files && input.files[0];
+    input.value = "";
+    if (f) handleVibePresetFile(f);
+  });
+  box.addEventListener("dragover", (e) => { e.preventDefault(); box.classList.add("dragover"); });
+  box.addEventListener("dragleave", () => box.classList.remove("dragover"));
+  box.addEventListener("drop", (e) => {
+    e.preventDefault();
+    box.classList.remove("dragover");
+    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f && f.type === "image/png") handleVibePresetFile(f);
+    else if (f) toast("请上传 PNG 图片", "warn");
+  });
+  $("vibeSavePresetBtn").addEventListener("click", () => {
+    if (!lastVibeExtract) {
+      toast("先上传一张 NAI 的 PNG 提取画风参数", "warn");
+      return;
+    }
+    $("vibePresetName").value = "画风 " + new Date().toLocaleDateString("zh-CN");
+    $("vibeTweakPanel").classList.remove("hidden");
+    $("vibePresetName").focus();
+  });
+  $("vibeTweakBtn").addEventListener("click", () => {
+    if (!lastVibeExtract) fillVibeTweakForm({ artists: "", styleTags: "", negative: "", seed: "", scale: "", steps: "", cfgRescale: "", sampler: "" });
+    $("vibeTweakPanel").classList.remove("hidden");
+  });
+  $("vibeTweakResetBtn").addEventListener("click", () => {
+    if (lastVibeExtract) fillVibeTweakForm(lastVibeExtract);
+  });
+  $("vibeSaveTweakedBtn").addEventListener("click", saveVibePresetFromForm);
+  renderVibeExtractResult();
+  renderVibePresets();
+}
+
 /* ---------- canvas ---------- */
 
 function showImage(rec) {
@@ -1339,6 +1586,7 @@ async function generate() {
     toast("请先输入提示词 (Prompt) 或角色提示词", "warn");
     return;
   }
+  applyVibePreset(p);
   saveSettings();
   setGenerating(true);
   if (isMobileView()) switchView("canvas");
@@ -1765,6 +2013,7 @@ function init() {
   bindImageUpload();
   bindMaskEditor();
   bindVibeTransfer();
+  bindVibePresets();
   bindTranslateButtons();
   bindSizeControls();
   bindSliders();

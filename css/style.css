@@ -1227,3 +1227,134 @@ body.view-history .panel-right { display: flex; }
   .panel-left { width: 360px; flex: 0 0 360px; }
   .panel-right { width: 220px; flex: 0 0 220px; }
 }
+
+/* ---------- 氛围转移 · 画风锁定 (PNG 元数据) ---------- */
+
+#vibePresetUpload {
+ border: 1.5px dashed var(--border-strong);
+ border-radius: 24px;
+ background: #2a2a2a;
+ cursor: pointer;
+ text-align: center;
+ padding: 18px 12px;
+ transition: border-color .15s, background .15s;
+}
+#vibePresetUpload:hover, #vibePresetUpload.dragover { border-color: var(--accent); background: #303030; }
+#vibePresetUpload .upload-empty { color: var(--text-dim, #9a95ab); font-size: 13px; }
+
+.vibe-result {
+ margin-top: 10px;
+ background: #2a2a2a;
+ border-radius: 24px;
+ padding: 14px;
+}
+.vibe-result-badge {
+ margin: 0 0 10px;
+ font-size: 12px;
+ color: #7ee2a8;
+ border: 1px solid rgba(126, 226, 168, .35);
+ border-radius: 999px;
+ display: inline-block;
+ padding: 2px 10px;
+}
+.vibe-param-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.vibe-param-grid > div {
+ background: rgba(0,0,0,.25);
+ border-radius: 12px;
+ padding: 8px 10px;
+ min-width: 0;
+}
+.vibe-param-grid em {
+ display: block;
+ font-style: normal;
+ font-size: 11px;
+ color: #9a95ab;
+ margin-bottom: 3px;
+}
+.vibe-param-grid span {
+ display: block;
+ font-size: 12px;
+ word-break: break-all;
+ color: var(--text, #e7e4f2);
+}
+@media (min-width: 861px) { .vibe-param-grid { grid-template-columns: 1fr 1fr 1fr; } }
+
+.vibe-tweak {
+ margin-top: 10px;
+ background: #2a2a2a;
+ border-radius: 24px;
+ padding: 12px;
+ display: flex;
+ flex-direction: column;
+ gap: 8px;
+}
+.vibe-tweak input {
+ width: 100%;
+ background: var(--bg-input, #0e0d14);
+ border: 1px solid var(--border, #322d45);
+ border-radius: 10px;
+ color: var(--text, #e7e4f2);
+ padding: 8px 10px;
+ font-size: 13px;
+}
+.vibe-tweak-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+@media (max-width: 480px) { .vibe-tweak-grid { grid-template-columns: 1fr 1fr; } }
+
+.vibe-preset-head {
+ margin-top: 12px;
+ font-size: 13px;
+ font-weight: 600;
+ display: flex;
+ align-items: center;
+ gap: 8px;
+}
+.preset-status {
+ font-size: 11px;
+ font-weight: 500;
+ color: var(--accent);
+ background: var(--accent-soft);
+ border-radius: 999px;
+ padding: 2px 10px;
+}
+.vibe-preset-list {
+ margin-top: 8px;
+ display: flex;
+ gap: 8px;
+ overflow-x: auto;
+ padding-bottom: 6px;
+}
+.vibe-preset-list::-webkit-scrollbar { height: 6px; }
+.vibe-preset-list::-webkit-scrollbar-thumb { background: var(--border-strong, #3a3552); border-radius: 4px; }
+.vibe-preset-empty {
+ font-size: 12px;
+ color: #9a95ab;
+ background: #2a2a2a;
+ border-radius: 16px;
+ padding: 12px;
+ width: 100%;
+ text-align: center;
+}
+.vibe-preset-card {
+ flex: 0 0 auto;
+ max-width: 240px;
+ background: #2a2a2a;
+ border: 1px solid transparent;
+ border-radius: 24px;
+ padding: 10px 12px;
+ display: flex;
+ align-items: center;
+ gap: 6px;
+}
+.vibe-preset-card.active { border-color: var(--accent); background: #2e2b3d; }
+.vibe-preset-name { font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.vibe-preset-card.active .vibe-preset-name { color: var(--accent); }
+.vibe-preset-desc {
+ font-size: 11px;
+ color: #9a95ab;
+ overflow: hidden;
+ text-overflow: ellipsis;
+ white-space: nowrap;
+ flex: 1;
+ min-width: 0;
+}
+.vibe-preset-card .icon-btn { flex: 0 0 auto; }
