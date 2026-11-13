@@ -637,6 +637,26 @@ function downscaleToMax(dataUrl, maxSide) {
   });
 }
 
+/* 官方行为: 氛围参考图统一转成 PNG 再 base64 提交 (非 PNG 原样提交可能被部分后端拒收) */
+function ensurePngDataUrl(dataUrl) {
+  return new Promise((resolve, reject) => {
+    if (/^data:image\/png/i.test(dataUrl)) {
+      resolve(dataUrl);
+      return;
+    }
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement("canvas");
+      c.width = img.naturalWidth;
+      c.height = img.naturalHeight;
+      c.getContext("2d").drawImage(img, 0, 0);
+      resolve(c.toDataURL("image/png"));
+    };
+    img.onerror = () => reject(new Error("图片解码失败"));
+    img.src = dataUrl;
+  });
+}
+
 function initMaskCanvas() {
   const base = $("maskBaseImg");
   const canvas = $("maskCanvas");
@@ -874,10 +894,11 @@ function addVibeFiles(files) {
     reader.onload = async () => {
       try {
         const scaled = await downscaleToMax(String(reader.result), 1024);
+        const png = await ensurePngDataUrl(scaled.dataUrl);
         vibes.push({
           id: crypto.randomUUID(),
-          b64: scaled.dataUrl.split(",")[1] || "",
-          dataUrl: scaled.dataUrl,
+          b64: png.split(",")[1] || "",
+          dataUrl: png,
           infoExtracted: 1,
           referenceStrength: 0.6
         });
@@ -903,8 +924,9 @@ function replaceVibeImage(idx) {
     reader.onload = async () => {
       try {
         const scaled = await downscaleToMax(String(reader.result), 1024);
-        vibes[idx].b64 = scaled.dataUrl.split(",")[1] || "";
-        vibes[idx].dataUrl = scaled.dataUrl;
+        const png = await ensurePngDataUrl(scaled.dataUrl);
+        vibes[idx].b64 = png.split(",")[1] || "";
+        vibes[idx].dataUrl = png;
         renderVibeList();
         saveVibes();
         toast("已替换这张氛围图", "ok");
