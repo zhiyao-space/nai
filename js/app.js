@@ -25,6 +25,9 @@ const DEFAULT_PARAMS = {
   n: 1,
   qualityOn: true,
   ucpOn: true,
+  ucLevel: "heavy",
+  smea: false,
+  smeaDyn: false,
   prompt: "",
   negative: "",
   action: "generate",
@@ -191,6 +194,23 @@ function bindPrompt() {
   $("ucpToggle").addEventListener("change", () => {
     params.ucpOn = $("ucpToggle").checked;
     updateNegativePlaceholder();
+    saveParams();
+  });
+  $("ucLevelSelect").value = params.ucLevel || "heavy";
+  $("ucLevelSelect").addEventListener("change", () => {
+    params.ucLevel = $("ucLevelSelect").value;
+    updateNegativePlaceholder();
+    saveParams();
+  });
+  $("smeaToggle").checked = !!params.smea;
+  $("smeaDynToggle").checked = !!params.smeaDyn;
+  $("smeaToggle").addEventListener("change", () => {
+    params.smea = $("smeaToggle").checked;
+    if (!params.smea) { params.smeaDyn = false; $("smeaDynToggle").checked = false; }
+    saveParams();
+  });
+  $("smeaDynToggle").addEventListener("change", () => {
+    params.smeaDyn = $("smeaDynToggle").checked;
     saveParams();
   });
   $("clearNegativeBtn").addEventListener("click", () => {
@@ -1022,6 +1042,8 @@ function updateVibeHints() {
   if (full) msgs.push(`已达上限 ${limit} 张，移除一张后可继续添加`);
   hint.textContent = msgs.join(" · ");
   hint.classList.toggle("hidden", !msgs.length);
+  /* V3 专属: SMEA / SMEA-DYN 开关仅 V3 家族显示 */
+  $("smeaRow").classList.toggle("hidden", familyOf() !== 3);
 }
 
 function uid() {
@@ -1579,6 +1601,9 @@ function collectParams() {
     n: params.n,
     qualityOn: params.qualityOn,
     ucpOn: params.ucpOn,
+    ucLevel: params.ucLevel,
+    smea: params.smea,
+    smeaDyn: params.smeaDyn,
     action,
     strength: params.strength,
     noise: params.noise,
@@ -1621,6 +1646,9 @@ function buildMeta(p) {
     seed: p.seed,
     qualityOn: p.qualityOn,
     ucpOn: p.ucpOn,
+    ucLevel: p.ucLevel,
+    smea: p.smea,
+    smeaDyn: p.smeaDyn,
     format: settings.format,
     action: p.action,
     strength: p.strength,

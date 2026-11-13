@@ -34,6 +34,18 @@
         <div class="toggle-row">
           <label class="switch"><input type="checkbox" id="qualityToggle" checked><span class="slider"></span><span class="switch-label">自动画质词 <button class="hint-btn" title="这是什么？">?</button></span></label>
           <label class="switch"><input type="checkbox" id="ucpToggle" checked><span class="slider"></span><span class="switch-label">自动排除瑕疵 <button class="hint-btn" title="这是什么？">?</button></span></label>
+          <div class="field-row">
+            <label class="field-label" for="ucLevelSelect">负向预设强度</label>
+            <select id="ucLevelSelect">
+              <option value="heavy">Heavy (官方重度)</option>
+              <option value="light">Light (官方轻度)</option>
+              <option value="none">None (不加预设)</option>
+            </select>
+          </div>
+          <div class="field-row hidden" id="smeaRow">
+            <label class="switch"><input type="checkbox" id="smeaToggle"><span class="slider"></span><span class="switch-label">SMEA (V3 高清稳定)</span></label>
+            <label class="switch"><input type="checkbox" id="smeaDynToggle"><span class="slider"></span><span class="switch-label">SMEA-DYN (动态细节)</span></label>
+          </div>
         </div>
         <p class="hint-text hidden">自动画质词：开启后自动附加「very aesthetic, masterpiece」等关键词，整体更精致。自动排除瑕疵：生成时自动排除模糊、低质量、水印等常见毛病，不用手写。</p>
       </section>

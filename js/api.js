@@ -103,6 +103,18 @@ function samplersFor(modelId) {
   return isV45(modelId) || modelFamily(modelId) === 4 ? SAMPLERS_V45 : SAMPLERS_V3;
 }
 
+/* 官方负向预设分级: Heavy(ucPreset=0) / Light(ucPreset=1) / None(ucPreset=3); Light 为 Heavy 去掉 nsfw 前缀 */
+function getUcPresetString(family, level) {
+  const heavy = UCP_PRESETS[family] || UCP_PRESETS[0];
+  if (level === "none") return "";
+  if (level === "light") return heavy.replace(/^nsfw, /, "");
+  return heavy;
+}
+
+function ucPresetIndex(level) {
+  return level === "none" ? 3 : level === "light" ? 1 : 0;
+}
+
 function composePrompt(rawPrompt, family, qualityOn) {
   const parts = [rawPrompt.trim()];
   if (qualityOn && QUALITY_TAGS[family]) parts.push(QUALITY_TAGS[family]);
@@ -119,7 +131,8 @@ function buildNaiPayload(p) {
   const family = modelFamily(p.model);
   const isV4 = family === 4;
   const finalPrompt = composePrompt(p.prompt, family, p.qualityOn);
-  const ucp = p.ucpOn && !p.negative.trim() ? UCP_PRESETS[family] : p.negative.trim();
+  const ucp = p.ucpOn && !p.negative.trim() ? getUcPresetString(family, p.ucLevel || "heavy") : p.negative.trim();
+  const ucIdx = p.ucpOn && !p.negative.trim() ? ucPresetIndex(p.ucLevel || "heavy") : 3;
   const action = p.action || "generate";
   const i2i = action === "img2img" || action === "inpaint";
 
@@ -132,7 +145,7 @@ function buildNaiPayload(p) {
     steps: p.steps,
     seed: p.seed,
     n_samples: p.n,
-    ucPreset: p.ucpOn ? 0 : 1,
+    ucPreset: ucIdx,
     qualityToggle: p.qualityOn,
     autoSmea: false,
     dynamic_thresholding: false,
@@ -205,8 +218,8 @@ function buildNaiPayload(p) {
     };
   } else {
     params.uc = ucp;
-    params.sm = false;
-    params.sm_dyn = false;
+    params.sm = !!p.smea;
+    params.sm_dyn = !!p.smea && !!p.smeaDyn;
     const vibes = (p.vibes || []).filter((v) => v.b64);
     if (vibes.length) {
       params.normalize_reference_strength = true;
@@ -237,7 +250,7 @@ function buildOpenAiPayload(p) {
     ? [finalPrompt].concat(chars.map((c) => c.prompt.trim())).join(" | ")
     : finalPrompt;
 
-  const ucp = p.ucpOn && !p.negative.trim() ? UCP_PRESETS[0] : p.negative.trim();
+  const ucp = p.ucpOn && !p.negative.trim() ? getUcPresetString(0, p.ucLevel || "heavy") : p.negative.trim();
   const negChars = chars.map((c) => (c.negative || "").trim()).filter(Boolean);
   const negativeText = negChars.length
     ? [ucp].concat(negChars).join(" | ")
