@@ -10,7 +10,7 @@
 - 生成模式: 文生图 (generate) / 图生图 (img2img) / 局部重绘 (inpaint, 内置蒙版画布)
 - 图生图: 源图上传 (点击 / 拖拽 / Ctrl+V 粘贴), 强度 Strength 与噪声 Noise, 尺寸自动同步源图
 - 角色提示词 (V4): 多角色独立正负提示词 + X/Y 位置坐标, 对应官方 characterPrompts 与 v4_prompt.char_captions 结构
-- 氛围转移 (Vibe Transfer): 最多 5 张参考图, 每张独立信息提取强度与参考强度, V4/V4.5 多图 / V3 单图, 仅 NovelAI 官方格式
+- 氛围转移 (Vibe Transfer): 最多 5 张参考图 (V3 仅 1 张), 每张独立信息提取强度与参考强度, 官方默认值 1.0 / 0.6, 点击缩略图可替换, 设置随浏览器持久化; 与图生图 / 局部重绘可叠加, 仅 NovelAI 官方格式
 - 图像尺寸预设 (竖图 / 横图 / 方图, 普通与大图), 宽高自定义
 - Steps / Scale / 采样器 (按模型系列动态切换, V4.5 与 V3 采样器名不同) / 噪声调度 / Variety+ (官方 sigma 公式) / CFG 残差 / Seed / 生成数量
 - 中→英 提示词翻译 (可选配置翻译模型)
@@ -28,7 +28,7 @@ NovelAI 格式的请求体与官方前端逻辑一致, 便于直连或中转:
 - Variety+ = `skip_cfg_above_sigma`, 官方公式: `sqrt((宽x高)/1011712) * (V4.5: 58, 其他: 19)`
 - 图生图: `action: "img2img"` + `image` (base64) + `strength` + `noise` + `extra_noise_seed`
 - 局部重绘: `action: "inpaint"` + `image` + `mask` (base64 PNG, 白色为重绘区域) + `add_original_image: true`
-- 氛围转移: V4/V4.5 为 `reference_image_multiple` / `reference_information_extracted_multiple` / `reference_strength_multiple` 三个平行数组; V3 为单值字段
+- 氛围转移: V4/V4.5 为 `reference_image_multiple` / `reference_information_extracted_multiple` / `reference_strength_multiple` 三个平行数组 + `normalize_reference_strength_multiple: true`; V3 为 `reference_image` / `reference_information_extracted` / `reference_strength` 单值字段 + `normalize_reference_strength: true`
 - 采样器: V4.5/V4 使用 `k_euler_a` / `k_dpmpp_2m_sde` 等命名, V3 使用 `k_euler_ancestral` 等命名
 
 ## 中转站 API 配置

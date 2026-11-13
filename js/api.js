@@ -167,7 +167,7 @@ function buildNaiPayload(p) {
 
     params.negative_prompt = ucp;
     params.use_coords = useCoords;
-    params.normalize_reference_strength_multiple = false;
+    params.normalize_reference_strength_multiple = true;
     params.legacy_uc = false;
     params.image_format = "png";
     params.reference_image_multiple = vibes.map((v) => v.b64);
@@ -209,6 +209,7 @@ function buildNaiPayload(p) {
     params.sm_dyn = false;
     const vibes = (p.vibes || []).filter((v) => v.b64);
     if (vibes.length) {
+      params.normalize_reference_strength = true;
       params.reference_image = vibes[0].b64;
       params.reference_information_extracted = Number(vibes[0].infoExtracted ?? 1);
       params.reference_strength = Number(vibes[0].referenceStrength ?? 0.6);

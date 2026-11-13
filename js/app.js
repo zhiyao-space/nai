@@ -59,6 +59,16 @@ let maskMode = "draw";
 let maskDirty = false;
 
 const VIBE_LIMIT = 5;
+const LS_VIBES = "nai_clone_vibes";
+
+function vibeLimit() {
+  return familyOf() === 3 ? 1 : VIBE_LIMIT;
+}
+
+function saveVibes() {
+  try { localStorage.setItem(LS_VIBES, JSON.stringify(vibes)); } catch (e) { /* 超出配额则不持久化 */ }
+}
+
 let vibes = [];
 
 let relayModels = [];
@@ -82,6 +92,8 @@ function loadState() {
     if (s) settings = { ...DEFAULT_SETTINGS, ...s };
     const p = JSON.parse(localStorage.getItem(LS_PARAMS) || "null");
     if (p) params = { ...DEFAULT_PARAMS, ...p };
+    const v = JSON.parse(localStorage.getItem(LS_VIBES) || "null");
+    if (Array.isArray(v)) vibes = v.filter((x) => x && x.b64).slice(0, VIBE_LIMIT);
   } catch (e) {}
 }
 
@@ -843,13 +855,14 @@ function bindVibeTransfer() {
 }
 
 function addVibeFiles(files) {
-  const room = VIBE_LIMIT - vibes.length;
+  const limit = vibeLimit();
+  const room = limit - vibes.length;
   if (room <= 0) {
-    toast(`氛围图最多 ${VIBE_LIMIT} 张`, "warn");
+    toast(familyOf() === 3 ? "V3 模型仅支持 1 张氛围图，请先移除现有氛围图" : `氛围图最多 ${limit} 张`, "warn");
     return;
   }
   const list = files.filter(Boolean).slice(0, room);
-  if (files.length > room) toast(`氛围图最多 ${VIBE_LIMIT} 张，已截取前 ${room} 张`, "warn");
+  if (files.length > room) toast(`氛围图最多 ${limit} 张，已截取前 ${room} 张`, "warn");
   if (!list.length) return;
   let pending = list.length;
   const done = () => {
@@ -868,6 +881,7 @@ function addVibeFiles(files) {
           infoExtracted: 1,
           referenceStrength: 0.6
         });
+        saveVibes();
       } catch (e) {
         toast("图片读取失败", "error");
       }
@@ -876,6 +890,32 @@ function addVibeFiles(files) {
     reader.onerror = () => { toast("图片读取失败", "error"); done(); };
     reader.readAsDataURL(file);
   }
+}
+
+function replaceVibeImage(idx) {
+  const inp = document.createElement("input");
+  inp.type = "file";
+  inp.accept = "image/*";
+  inp.addEventListener("change", () => {
+    const f = inp.files && inp.files[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const scaled = await downscaleToMax(String(reader.result), 1024);
+        vibes[idx].b64 = scaled.dataUrl.split(",")[1] || "";
+        vibes[idx].dataUrl = scaled.dataUrl;
+        renderVibeList();
+        saveVibes();
+        toast("已替换这张氛围图", "ok");
+      } catch (e) {
+        toast("图片读取失败", "error");
+      }
+    };
+    reader.onerror = () => toast("图片读取失败", "error");
+    reader.readAsDataURL(f);
+  });
+  inp.click();
 }
 
 function buildVibeSlider(vibe, key, label) {
@@ -921,6 +961,7 @@ function renderVibeList() {
     del.addEventListener("click", () => {
       vibes.splice(idx, 1);
       renderVibeList();
+      saveVibes();
     });
     head.appendChild(label);
     head.appendChild(del);
@@ -930,6 +971,9 @@ function renderVibeList() {
     thumb.className = "vibe-thumb";
     thumb.src = v.dataUrl;
     thumb.alt = "氛围参考图";
+    thumb.style.cursor = "pointer";
+    thumb.title = "点击替换这张氛围图";
+    thumb.addEventListener("click", () => replaceVibeImage(idx));
     card.appendChild(thumb);
 
     card.appendChild(buildVibeSlider(v, "infoExtracted", "信息提取 (Information Extracted)"));
@@ -945,12 +989,13 @@ function updateVibeHints() {
   if (settings.format === "openai" && vibes.length) {
     msgs.push("当前为 OpenAI 兼容格式：生成时自动尝试官方 NAI 通道，不支持则忽略氛围图");
   }
-  if (familyOf() === 3 && vibes.length > 1) {
+  const limit = vibeLimit();
+  if (familyOf() === 3 && vibes.length) {
     msgs.push("V3 模型仅支持 1 张氛围图，生成时只使用第 1 张");
   }
-  const full = vibes.length >= VIBE_LIMIT;
+  const full = vibes.length >= limit;
   $("vibeUploadBox").classList.toggle("hidden", full);
-  if (full) msgs.push(`已达上限 ${VIBE_LIMIT} 张，移除一张后可继续添加`);
+  if (full) msgs.push(`已达上限 ${limit} 张，移除一张后可继续添加`);
   hint.textContent = msgs.join(" · ");
   hint.classList.toggle("hidden", !msgs.length);
 }

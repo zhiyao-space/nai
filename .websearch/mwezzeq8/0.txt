@@ -1,0 +1,70 @@
+# WebSearch 完整正文
+# query: NovelAI official vibe transfer reference_image_multiple information_extracted reference_strength payload frontend resize 2025
+# index: 1
+
+给机器人发送  #派蒙nai帮助
+Section titled “给机器人发送 #派蒙nai帮助”
+常用指令
+派蒙nai绘画指令：
+#绘画[tags], #以图画图[tags],
+使用特殊采样器：
+smea,
+关闭DYN的SMEA采样器：
+smea, dynoff,
+指定反面词条：
+ntags = [tags],
+参考图片：
+绘画指令中引用/附带图片
+控制长宽：
+竖图/横图/方图,
+1024*1024,
+512×1024,
+控制步数：
+步数28,
+绘画高级指令
+ 采样器（点我展开）
+官网推荐使用前4个
+Euler Ancestral,
+Euler,
+DPM++ 2M SDE,
+DPM++ 2S Ancestral,
+DPM++ 2M,
+DPM++ SDE,
+DDIM,
+复制时注意大小写与空格
+ 噪点调度： Noise_Schedule
+Noise_Schedule = native,
+Noise_Schedule = karras,
+Noise_Schedule = exponential,
+Noise_Schedule = polyexponential,
+ 提示词引导系数： Prompt_Guidance = 5.0,  数值范围：0-10   提示引导重新缩放系数： Prompt_Guidance_Rescale = 0.00,  数值范围：0-1   负面提示词引导系数： Undesired_Content_Strength = 1.00,  数值范围：0-1.5   参考图片信息提取系数： Information_Extracted = 1.00,  数值范围：0.01-1   参考图片强度系数： Reference_Strength = 0.60,  数值范围：0.01-1   以图画图_图片强度系数： Img2img_Strength = 0.70,  数值范围：0.01-0.99   以图画图_图片噪点系数： Img2img_Noise = 0.00,  数值范围：0.01-0.99   指定种子： seed = 任意10位数字,  数值范围：0-9999999999   开启Variety+： Variety_on,  作用：可提高画面的多样性和饱和度，可能会降低内容的相关性。
+Enable guidance only after body has been formed, to improve diversity and saturation of samples. May reduce relevance.
+点评：增加更多可变性，在无提示词引导的情况下减少将角色放在白色背景上，或使用一组有限的姿势，或者每次都以相同的方式绘制衣服。但开启Variety+意味着负面提示只会在确定体形后使用。
+ 开启Decrisp： Decrisp_on,  作用：缓解生成具有较高 Prompt Guidance 的图像时可能发生的某些颜色和视觉伪影问题。
+This setting, that can be activated or deactivated next to the Prompt Guidance slider, mitigates certain color and visual artifact issues that can happen when generating images with higher Guidance.
+While it is designed and recommended for images with a high Guidance value, Decrisper has a visible impact on images generated with any Guidance value, so you can also use it for lower Guidance images if you prefer.
+ 高级传参方法   更加直观的控制绘画参数的语法，前提是你要知道使用的值的含义：
+点我跳转
+ps.各种绘画高级指令可相互搭配
+对smea的说明
+Section titled “对smea的说明”
+举个例子
+#绘画 artist:ciloranko, [artist:tianliang duohe fangdongye], [artist:sho_(sho_lwlw)], [artist:baku-p], [artist:baku-p], 1girl,bear ears,loli,Sitting on the bed,White hair,Red eyes,white dress,white pantyhose,{best quality, amazing quality, very aesthetic, absurdres,realistic,reverse light,golden light,} SMEA
+在#绘画 指令的任何位置写入 smea
+smea的作用
+机制：调用 smea 特殊采样，让我们可以在1024×1024大小的图片上获得2048×2048的图片被压缩后的效果 实际效果取决于画师串；自己尝试开与不开 smea 对比效果。
+nai3氛围转移（Vibe Transfer）的说明
+Section titled “nai3氛围转移（Vibe Transfer）的说明”
+#绘图  时带有引用图片，则自动使用 氛围转移 大致原理是NovelAi提取图片中的信息后，将提取后的信息文本放在你发送的tags中一起放入扩散模型中 常用于新出的角色，无法用语言形容的场景等 可使用三次元的图片尝试效果 注释：nai3 与  nai4  使用不同的氛围转移指令
+可与绘画高级指令一起使用
+参考图片信息提取系数： Information_Extracted = 1.00,
+参考图片强度系数： Reference_Strength = 0.60,
+nai4氛围转移
+Section titled “nai4氛围转移”
+发送  #氛围转移  查看可用指令 发送  #派蒙nai查看氛围转移  查看已经保存的氛围转移文件 指令:  {氛围vibe1转移} {氛围vibe2转移}
+举个例子
+#绘画nai4模型 {氛围派蒙生日_官图转移} {氛围纳西妲生日_官图转移} {氛围可莉生日_官图转移} 3girls, loli, amazing quality, very aesthetic, absurdres,
+{人物 paimon (genshin impact) 人物},
+{人物 nahida (genshin impact), {位置左} 人物},
+{人物 klee (genshin impact), t-shirt, white pantyhose, {位置右}, ntags = hat, bag 人物}
+ntags = blurry, lowres, error, film grain, scan artifacts, worst quality, bad quality, jpeg artifacts, very displeasin...
