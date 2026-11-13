@@ -66,7 +66,9 @@ function vibeLimit() {
 }
 
 function saveVibes() {
-  try { localStorage.setItem(LS_VIBES, JSON.stringify(vibes)); } catch (e) { /* 超出配额则不持久化 */ }
+  /* encoded (encode-vibe 二进制) 不落盘, 由独立编码缓存管理 */
+  const slim = vibes.map((v) => { const { encoded, ...rest } = v; return rest; });
+  try { localStorage.setItem(LS_VIBES, JSON.stringify(slim)); } catch (e) { /* 超出配额则不持久化 */ }
 }
 
 let vibes = [];

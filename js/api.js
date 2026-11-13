@@ -170,7 +170,7 @@ function buildNaiPayload(p) {
     params.normalize_reference_strength_multiple = true;
     params.legacy_uc = false;
     params.image_format = "png";
-    params.reference_image_multiple = vibes.map((v) => v.b64);
+    params.reference_image_multiple = vibes.map((v) => v.encoded || v.b64);
     params.reference_information_extracted_multiple = vibes.map((v) => Number(v.infoExtracted ?? 1));
     params.reference_strength_multiple = vibes.map((v) => Number(v.referenceStrength ?? 0.6));
 
@@ -210,7 +210,7 @@ function buildNaiPayload(p) {
     const vibes = (p.vibes || []).filter((v) => v.b64);
     if (vibes.length) {
       params.normalize_reference_strength = true;
-      params.reference_image = vibes[0].b64;
+      params.reference_image = vibes[0].encoded || vibes[0].b64;
       params.reference_information_extracted = Number(vibes[0].infoExtracted ?? 1);
       params.reference_strength = Number(vibes[0].referenceStrength ?? 0.6);
     }
@@ -382,11 +382,82 @@ async function generateOpenai(cfg, payload, signal) {
   return blobs;
 }
 
+/* ---------- 空悲切中转站: Vibe 参考图需先编码 (/v1/ai/encode-vibe) ---------- */
+const LS_VIBE_ENCODE_CACHE = "nai_vibe_encode_cache_v1";
+
+function vibeCacheKey(b64, extracted, model) {
+  let h = 0;
+  const step = Math.max(1, Math.floor(b64.length / 4096));
+  for (let i = 0; i < b64.length; i += step) h = (h * 31 + b64.charCodeAt(i)) >>> 0;
+  return `${model}|${extracted}|${b64.length}|${h}`;
+}
+
+function loadVibeEncodeCache() {
+  try { return JSON.parse(localStorage.getItem(LS_VIBE_ENCODE_CACHE) || "{}") || {}; } catch (e) { return {}; }
+}
+
+function saveVibeEncodeCache(cache) {
+  try { localStorage.setItem(LS_VIBE_ENCODE_CACHE, JSON.stringify(cache)); } catch (e) { /* 超配额静默失败, 缓存仅内存生效 */ }
+}
+
+function getCachedVibeEncoded(b64, extracted, model) {
+  return loadVibeEncodeCache()[vibeCacheKey(b64, extracted, model)] || null;
+}
+
+function putCachedVibeEncoded(b64, extracted, model, encoded) {
+  const cache = loadVibeEncodeCache();
+  cache[vibeCacheKey(b64, extracted, model)] = encoded;
+  saveVibeEncodeCache(cache);
+}
+
+function arrayBufferToBase64(buf) {
+  const bytes = new Uint8Array(buf);
+  let bin = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+  }
+  return btoa(bin);
+}
+
+async function encodeVibe(cfg, b64, infoExtracted, model, signal) {
+  const cached = getCachedVibeEncoded(b64, infoExtracted, model);
+  if (cached) return cached;
+  const url = resolveApiUrl(cfg.base, "nai", "/ai/encode-vibe");
+  let res;
+  try {
+    res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${cfg.key}` },
+      body: JSON.stringify({ image: b64, information_extracted: Number(infoExtracted ?? 1), model }),
+      signal
+    });
+  } catch (e) {
+    throw friendlyNetworkError(e);
+  }
+  if (!res.ok) await readErrorResponse(res);
+  const encoded = arrayBufferToBase64(await res.arrayBuffer());
+  if (!encoded) throw new Error("氛围图编码失败: 服务端返回空数据");
+  putCachedVibeEncoded(b64, infoExtracted, model, encoded);
+  return encoded;
+}
+
+/* 编码结果随图片数据+提取强度+模型缓存, 命中缓存不重复扣编码费 */
+async function ensureVibesEncoded(cfg, params, signal) {
+  const vibes = (params.vibes || []).filter((v) => v && v.b64);
+  if (!vibes.length) return;
+  for (const v of vibes) {
+    if (typeof toast === "function") toast("正在编码氛围参考图…", "info");
+    v.encoded = await encodeVibe(cfg, v.b64, v.infoExtracted ?? 1, params.model, signal);
+  }
+}
+
 async function requestGeneration(cfg, params, signal) {
-  /* 参考图通道: 中转站 OpenAI Images 端点不支持氛围转移字段,
-     带氛围图时改走 NovelAI 原生端点 {base}/v1/ai/generate-image */
-  if (cfg.format === "openai" && (params.vibes || []).some((v) => v && v.b64)) {
-    return generateNai(cfg, buildNaiPayload(params), signal);
+  /* 参考图通道: 中转站不接受原始图片 Base64, 需先 encode-vibe 编码;
+     OpenAI Images 端点不支持氛围字段, 带氛围图时改走原生端点 */
+  if ((params.vibes || []).some((v) => v && v.b64)) {
+    await ensureVibesEncoded(cfg, params, signal);
+    if (cfg.format === "openai") return generateNai(cfg, buildNaiPayload(params), signal);
   }
   const payload = cfg.format === "openai" ? buildOpenAiPayload(params) : buildNaiPayload(params);
   return cfg.format === "openai" ? generateOpenai(cfg, payload, signal) : generateNai(cfg, payload, signal);
