@@ -83,7 +83,22 @@ function metaToComment(m) {
     mask: "",
     extra_noise_seed: m.seed,
     variations: [],
-    reference_image_multiple: (m.vibes || []).map((v) => v.b64 || ""),
+    vibes: (m.vibes || [])
+      .filter((v) => v && (v.encoded || v.b64))
+      .map((v) => ({
+        /* 官方格式: data 为编码后的 Vibe 二进制 base64, 官网/第三方工具凭此复用画风 */
+        data: v.encoded || v.b64 || "",
+        infoExtracted: v.infoExtracted ?? 1,
+        strength: v.referenceStrength ?? 0.6
+      })),
+    director_reference_images: (m.preciseRefs || []).filter((r) => r && r.b64).map((r) => r.b64),
+    director_reference_descriptions: (m.preciseRefs || []).filter((r) => r && r.b64).map((r) => ({
+      caption: { base_caption: r.type || "character", char_captions: [] },
+      legacy_uc: false
+    })),
+    director_reference_information_extracted: (m.preciseRefs || []).filter((r) => r && r.b64).map(() => 1),
+    director_reference_strength_values: (m.preciseRefs || []).filter((r) => r && r.b64).map((r) => Number(r.strength ?? 1)),
+    director_reference_secondary_strength_values: (m.preciseRefs || []).filter((r) => r && r.b64).map((r) => 1 - Number(r.fidelity ?? 1)),
     reference_information_extracted_multiple: (m.vibes || []).map((v) => v.infoExtracted ?? 1),
     reference_strength_multiple: (m.vibes || []).map((v) => v.referenceStrength ?? 0.6),
     use_reference_image: (m.vibes || []).length > 0,
@@ -173,11 +188,33 @@ function commentToMeta(c) {
     characters: chars,
     useCoords: !!(c.v4_prompt && c.v4_prompt.use_coords),
     useOrder: c.v4_prompt ? c.v4_prompt.use_order !== false : false,
-    vibes: refImgs.filter(Boolean).map((b64, i) => ({
-      b64,
-      infoExtracted: refInfo[i] ?? 1,
-      referenceStrength: refStr[i] ?? 0.6
-    })),
+    /* 官方 stealth JSON 的 vibes[]: data 为编码后 Vibe 二进制 (可直接复用, 无需重新编码) */
+    vibes: (Array.isArray(c.vibes) && c.vibes.length
+      ? c.vibes.filter((v) => v && v.data).map((v) => ({
+          b64: "",
+          encoded: v.data,
+          infoExtracted: v.infoExtracted ?? 1,
+          referenceStrength: v.strength ?? 0.6
+        }))
+      : refImgs.filter(Boolean).map((b64, i) => ({
+          b64,
+          encoded: "",
+          infoExtracted: refInfo[i] ?? 1,
+          referenceStrength: refStr[i] ?? 0.6
+        }))),
+    preciseRefs: (Array.isArray(c.director_reference_images) ? c.director_reference_images : [])
+      .filter(Boolean)
+      .map((b64, i) => {
+        const descs = Array.isArray(c.director_reference_descriptions) ? c.director_reference_descriptions : [];
+        const strengths = Array.isArray(c.director_reference_strength_values) ? c.director_reference_strength_values : [];
+        const secondary = Array.isArray(c.director_reference_secondary_strength_values) ? c.director_reference_secondary_strength_values : [];
+        return {
+          b64,
+          type: (descs[i] && descs[i].caption && descs[i].caption.base_caption) || "character",
+          strength: strengths[i] ?? 1,
+          fidelity: 1 - (secondary[i] ?? 0)
+        };
+      }),
     model: c.model || (c.v4 ? "nai-diffusion-4-5-full"
       : /XL/i.test(source) ? "nai-diffusion-3" : undefined)
   };

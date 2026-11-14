@@ -1111,6 +1111,8 @@ function renderPreciseList() {
 function bindPrecise() {
   const box = $("preciseUploadBox");
   const input = $("preciseFileInput");
+  if (!box || !input) return;
+  input.addEventListener("click", (e) => e.stopPropagation());
   box.addEventListener("click", () => input.click());
   input.addEventListener("change", () => {
     const files = input.files;
@@ -1675,7 +1677,12 @@ function downloadImage(rec) {
   const m = rec.meta || {};
   const seedPart = m.seed != null ? `_${m.seed}` : "";
   const sizePart = m.w && m.h ? `_${m.w}x${m.h}` : "";
-  downloadBlob(rec.blob, `NovelAI${sizePart}${seedPart}.png`);
+  /* 官方逻辑: 下载时把完整参数 (含编码后的 Vibe 数据 / 精准参考) 写进 PNG,
+     tEXt Comment + alpha 隐形通道双通道嵌入, 官网与第三方工具导入即可复刻画风 */
+  embedPngMetadata(rec.blob, m).then((embedded) => {
+    downloadBlob(embedded, `NovelAI${sizePart}${seedPart}.png`);
+    if (m.vibes && m.vibes.length) toast("已嵌入 Vibe 编码与生成参数, 可在官方/第三方工具导入复用", "ok", 5000);
+  }).catch(() => downloadBlob(rec.blob, `NovelAI${sizePart}${seedPart}.png`));
 }
 
 /* ---------- generation ---------- */
@@ -1718,6 +1725,7 @@ function collectParams() {
     useOrder: params.useOrder,
     vibes: vibes.map((v) => ({
       b64: v.b64,
+      encoded: v.encoded || "",
       infoExtracted: v.infoExtracted,
       referenceStrength: v.referenceStrength
     })),
