@@ -925,6 +925,35 @@ function bindVibeTransfer() {
   });
 }
 
+function addVibeFromDataUrl(dataUrl, label) {
+  const limit = vibeLimit();
+  const room = limit - vibes.length;
+  if (room <= 0) {
+    toast(familyOf() === 3 ? "V3 模型仅支持 1 张氛围图，请先移除现有氛围图" : `氛围图最多 ${limit} 张`, "warn");
+    return Promise.resolve(false);
+  }
+  return (async () => {
+    try {
+      const scaled = await downscaleToMax(dataUrl, 1024);
+      const png = await ensurePngDataUrl(scaled.dataUrl);
+      vibes.push({
+        id: crypto.randomUUID(),
+        b64: png.split(",")[1] || "",
+        dataUrl: png,
+        infoExtracted: 1,
+        referenceStrength: 0.9
+      });
+      saveVibes();
+      renderVibeList();
+      toast(`已把${label || "该图"}加入氛围参考 (参考强度 0.9)`, "ok");
+      return true;
+    } catch (e) {
+      toast("图片读取失败", "error");
+      return false;
+    }
+  })();
+}
+
 function addVibeFiles(files) {
   const limit = vibeLimit();
   const room = limit - vibes.length;
@@ -1572,6 +1601,21 @@ function buildHistoryItem(rec) {
   reuse.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>';
   reuse.addEventListener("click", (e) => { e.stopPropagation(); reuseParams(rec.meta); });
 
+  const toVibe = document.createElement("button");
+  toVibe.className = "icon-btn";
+  toVibe.title = "转为氛围图 (训练新画风)";
+  toVibe.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>';
+  toVibe.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    try {
+      const url = objectUrls.get(rec.id) || URL.createObjectURL(rec.blob);
+      const dataUrl = await new Promise((res, rej) => { const i = new Image(); i.onload = () => { const c = document.createElement("canvas"); c.width = i.naturalWidth; c.height = i.naturalHeight; c.getContext("2d").drawImage(i, 0, 0); res(c.toDataURL("image/png")); }; i.onerror = rej; i.src = url; });
+      await addVibeFromDataUrl(dataUrl, "历史图像");
+    } catch (err) {
+      toast("图片读取失败", "error");
+    }
+  });
+
   const dl = document.createElement("button");
   dl.className = "icon-btn";
   dl.title = "下载";
@@ -1588,6 +1632,7 @@ function buildHistoryItem(rec) {
   });
 
   actions.appendChild(reuse);
+ actions.appendChild(toVibe);
   actions.appendChild(dl);
   actions.appendChild(del);
   el.appendChild(actions);
