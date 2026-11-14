@@ -1155,7 +1155,6 @@ function bindPrecise() {
   const input = $("preciseFileInput");
   if (!box || !input) return;
   input.addEventListener("click", (e) => e.stopPropagation());
-  box.addEventListener("click", () => input.click());
   input.addEventListener("change", () => {
     const files = input.files;
     input.value = "";
