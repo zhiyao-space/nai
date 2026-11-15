@@ -177,7 +177,8 @@ function buildNaiPayload(p) {
     const chars = (p.characters || []).filter((c) => c.prompt && c.prompt.trim());
     const useCoords = !!p.useCoords && chars.length > 0;
     const refs = (p.preciseRefs || []).filter((r) => r && r.b64);
-    const vibes = (p.vibes || []).filter((v) => v.b64 && !refs.length); /* 官方: 精准参考与氛围转移互斥 */
+    const vibes = (p.vibes || []).filter((v) => (v.b64 || v.encoded) && !refs.length); /* 官方: 精准参考与氛围转移互斥 */
+ if (vibes.length) params.use_reference_image = true; /* 官方 V4 请求体: 有氛围图时置位 */
 
     params.negative_prompt = ucp;
     params.use_coords = useCoords;
@@ -229,7 +230,7 @@ function buildNaiPayload(p) {
     params.uc = ucp;
     params.sm = !!p.smea;
     params.sm_dyn = !!p.smea && !!p.smeaDyn;
-    const vibes = (p.vibes || []).filter((v) => v.b64);
+    const vibes = (p.vibes || []).filter((v) => v.b64 || v.encoded);
     if (vibes.length) {
       params.normalize_reference_strength = true;
       params.reference_image = vibes[0].encoded || vibes[0].b64;

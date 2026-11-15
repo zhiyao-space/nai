@@ -1027,7 +1027,7 @@ function replaceVibeImage(idx) {
   inp.click();
 }
 
-function buildVibeSlider(vibe, key, label) {
+function buildVibeSlider(vibe, key, label, onChange) {
   const wrap = document.createElement("div");
   wrap.className = "field slider-field";
   const lab = document.createElement("label");
@@ -1046,10 +1046,18 @@ function buildVibeSlider(vibe, key, label) {
   inp.addEventListener("input", () => {
     vibe[key] = +inp.value;
     out.textContent = (+inp.value).toFixed(2);
+    if (typeof onChange === "function") onChange(+inp.value);
   });
   wrap.appendChild(lab);
   wrap.appendChild(inp);
   return wrap;
+}
+
+function vibeBadgeState(v) {
+  /* 编码状态: v.encoded 为导入/已注入的编码; 否则查编码缓存 (命中则生成时不重复扣费) */
+  if (v.encoded) return { text: "已编码 · 免费复用", cls: "ok" };
+  if (v.b64 && typeof getCachedVibeEncoded === "function" && getCachedVibeEncoded(v.b64, v.infoExtracted ?? 1, effectiveModel())) return { text: "已缓存 · 免费复用", cls: "ok" };
+  return { text: "生成时编码 · 约 2 Anlas", cls: "" };
 }
 
 function renderVibeList() {
@@ -1073,19 +1081,39 @@ function renderVibeList() {
       saveVibes();
     });
     head.appendChild(label);
+    let badge = null;
+    if (familyOf() !== 3 && (v.b64 || v.encoded)) {
+      badge = document.createElement("span");
+      const st = vibeBadgeState(v);
+      badge.className = "vibe-enc-badge " + st.cls;
+      badge.textContent = st.text;
+      head.appendChild(badge);
+    }
     head.appendChild(del);
     card.appendChild(head);
 
-    const thumb = document.createElement("img");
-    thumb.className = "vibe-thumb";
-    thumb.src = v.dataUrl;
-    thumb.alt = "氛围参考图";
-    thumb.style.cursor = "pointer";
-    thumb.title = "点击替换这张氛围图";
-    thumb.addEventListener("click", () => replaceVibeImage(idx));
-    card.appendChild(thumb);
+    if (v.dataUrl) {
+      const thumb = document.createElement("img");
+      thumb.className = "vibe-thumb";
+      thumb.src = v.dataUrl;
+      thumb.alt = "氛围参考图";
+      thumb.style.cursor = "pointer";
+      thumb.title = "点击替换这张氛围图";
+      thumb.addEventListener("click", () => replaceVibeImage(idx));
+      card.appendChild(thumb);
+    } else {
+      /* 官方 PNG 导入的纯编码 Vibe: 无原图数据, 显示占位块 */
+      const ph = document.createElement("div");
+      ph.className = "vibe-thumb vibe-thumb-ph";
+      ph.textContent = "Vibe 编码";
+      ph.title = "该条目只有内嵌的 Vibe 编码数据 (来自 PNG 元数据), 无原图预览";
+      card.appendChild(ph);
+    }
 
-    card.appendChild(buildVibeSlider(v, "infoExtracted", "信息提取 (Information Extracted)"));
+    card.appendChild(buildVibeSlider(v, "infoExtracted", "信息提取 (Information Extracted)", () => {
+      /* 改变信息提取强度会使编码缓存失效, 实时刷新徽标 */
+      if (badge) { const st = vibeBadgeState(v); badge.className = "vibe-enc-badge " + st.cls; badge.textContent = st.text; }
+    }));
     card.appendChild(buildVibeSlider(v, "referenceStrength", "参考强度 (Reference Strength)"));
     list.appendChild(card);
   });
@@ -1954,6 +1982,44 @@ function prependHistoryItem(rec) {
 
 /* ---------- meta import ---------- */
 
+function bindVibePngImport() {
+  const input = $("vibePngInput");
+  if (!input) return;
+  $("importVibePngBtn").addEventListener("click", () => input.click());
+  input.addEventListener("change", async () => {
+    const file = input.files && input.files[0];
+    input.value = "";
+    if (!file) return;
+    try {
+      const meta = commentToMeta(await readPngMetadata(file));
+      const list = (meta && Array.isArray(meta.vibes)) ? meta.vibes.filter((v) => v.b64 || v.encoded) : [];
+      if (!list.length) {
+        toast("该 PNG 未内嵌 Vibe 数据 (仅支持官方或本站生成的图)", "warn");
+        return;
+      }
+      let added = 0, free = false;
+      for (const v of list) {
+        if (vibes.length >= vibeLimit()) { toast(`氛围图最多 ${vibeLimit()} 张`, "warn"); break; }
+        vibes.push({
+          id: crypto.randomUUID(),
+          b64: v.b64 || "",
+          dataUrl: v.b64 ? "data:image/png;base64," + v.b64 : "",
+          encoded: v.encoded || undefined,
+          infoExtracted: v.infoExtracted ?? 1,
+          referenceStrength: v.referenceStrength ?? 0.6
+        });
+        if (v.encoded) free = true;
+        added++;
+      }
+      renderVibeList();
+      saveVibes();
+      if (added) toast(`已导入 ${added} 条 Vibe${free ? " (含编码, 免费复用无需重新编码)" : ""}`, "ok");
+    } catch (e) {
+      toast("读取 PNG 元数据失败: " + (e.message || e), "error");
+    }
+  });
+}
+
 function bindMetaImport() {
   const input = $("metaFileInput");
   $("importMetaBtn").addEventListener("click", () => input.click());
@@ -2312,6 +2378,7 @@ function init() {
   bindCollapsibles();
   bindClearHistory();
   bindMetaImport();
+  bindVibePngImport();
   bindSettingsModal();
   bindHints();
   bindModelSelectChange();

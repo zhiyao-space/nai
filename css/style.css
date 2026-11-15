@@ -1361,6 +1361,35 @@ body.view-history .panel-right { display: flex; }
 
 /* 精准参考 (Precise Reference) */
 .precise-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+
+.vibe-enc-badge {
+  display: inline-block;
+  font-size: 10px;
+  line-height: 1;
+  padding: 3px 7px;
+  border-radius: 999px;
+  margin-left: 6px;
+  color: #9aa0ac;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  white-space: nowrap;
+}
+.vibe-enc-badge.ok {
+  color: #6ee7a0;
+  background: rgba(52, 211, 153, 0.12);
+  border-color: rgba(52, 211, 153, 0.35);
+}
+.vibe-thumb-ph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 11px;
+  color: #9aa0ac;
+  background: repeating-linear-gradient(45deg, rgba(255,255,255,0.04) 0 8px, rgba(255,255,255,0.02) 8px 16px);
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  box-sizing: border-box;
+}
 .precise-item { display: flex; align-items: center; gap: 8px; background: #232323; border: 1px solid #333; border-radius: 12px; padding: 8px; }
 .precise-item img { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; flex: none; cursor: pointer; }
 .precise-item select { flex: 1 1 auto; min-width: 0; background: #1c1c1c; color: #ddd; border: 1px solid #3a3a3a; border-radius: 8px; padding: 6px; font-size: 12px; }
