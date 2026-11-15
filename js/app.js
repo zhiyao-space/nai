@@ -943,6 +943,19 @@ function bindVibeTransfer() {
     renderVibeList();
     toast("已应用只学画风参数：信息提取 0.35 + 参考强度 0.7；建议在负向提示词里写上不想固定的特征（如固定发色、固定服饰）", "ok", 6000);
   });
+  $("faceVibeBtn").addEventListener("click", () => {
+    if (!vibes.length) {
+      toast("先上传至少一张氛围图", "warn");
+      return;
+    }
+    for (const v of vibes) {
+      v.infoExtracted = 0.6; /* 中档信息提取: 保留脸部/人物氛围与神态类型, 不钉死发色瞳色服饰发型 */
+      v.referenceStrength = 0.75;
+    }
+    saveVibes();
+    renderVibeList();
+    toast("已应用脸部氛围参数：信息提取 0.6 + 参考强度 0.75；保留脸部与人物氛围，不锁具体颜色服饰。若仍串色，可在负向提示词加「same hairstyle, same clothing, hair color as reference」类描述", "ok", 7000);
+  });
 }
 
 function addVibeFromDataUrl(dataUrl, label) {

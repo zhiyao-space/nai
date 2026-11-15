@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NovelAI 图像生成</title>
-<link rel="stylesheet" href="css/style.css?v=20261115b">
+<link rel="stylesheet" href="css/style.css?v=20261115c">
 </head>
 <body>
 
@@ -71,6 +71,7 @@
  <p class="field-hint hidden" id="vibeHint"></p>
  <button class="mini-btn" id="stableStyleBtn" type="button" style="margin: 8px 0;" title="信息提取 1.0 + 参考强度 0.9, 配合固定 Seed 最稳">⚡ 稳画风推荐参数</button>
  <button class="mini-btn" id="styleOnlyBtn" type="button" style="margin: 8px 0;" title="信息提取 0.35 + 参考强度 0.7: 只学画风和构图, 不锁发色/眼色/服饰等人物具体特征">🎨 只学画风 (防人物串色)</button>
+ <button class="mini-btn" id="faceVibeBtn" type="button" style="margin: 8px 0;" title="信息提取 0.6 + 参考强度 0.75: 保留脸部/人物氛围与神态类型, 但不钉死发色、瞳色、服饰、发型">👤 脸部氛围 (不锁颜色服饰)</button>
  <button class="mini-btn" id="importVibePngBtn" type="button" title="从官方或本站生成的 PNG 提取内嵌 Vibe 编码加入氛围面板, 不改动提示词和其他参数">⬇ 从 PNG 导入 Vibe</button>
  <input type="file" id="vibePngInput" accept="image/png" class="hidden">
  <div id="vibeList" class="vibe-list"></div>
@@ -457,8 +458,8 @@
 
 <script src="js/zip.js?v=20261110g"></script>
 <script src="js/db.js?v=20261110g"></script>
-<script src="js/api.js?v=20261115b"></script>
-<script src="js/pngmeta.js?v=20261115b"></script>
-<script src="js/app.js?v=20261115b"></script>
+<script src="js/api.js?v=20261115c"></script>
+<script src="js/pngmeta.js?v=20261115c"></script>
+<script src="js/app.js?v=20261115c"></script>
 </body>
 </html>
