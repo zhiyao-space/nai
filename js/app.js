@@ -930,6 +930,19 @@ function bindVibeTransfer() {
     renderVibeList();
     toast("已应用稳画风参数：信息提取 1.0 + 参考强度 0.9；建议再固定 Seed 效果最稳", "ok", 5000);
   });
+  $("styleOnlyBtn").addEventListener("click", () => {
+    if (!vibes.length) {
+      toast("先上传至少一张氛围图", "warn");
+      return;
+    }
+    for (const v of vibes) {
+      v.infoExtracted = 0.35; /* 低信息提取: 只学画风/构图, 不锁发色眼色服饰等人物细节 */
+      v.referenceStrength = 0.7;
+    }
+    saveVibes();
+    renderVibeList();
+    toast("已应用只学画风参数：信息提取 0.35 + 参考强度 0.7；建议在负向提示词里写上不想固定的特征（如固定发色、固定服饰）", "ok", 6000);
+  });
 }
 
 function addVibeFromDataUrl(dataUrl, label) {
