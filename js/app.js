@@ -229,6 +229,13 @@ function bindPrompt() {
     params.smeaDyn = $("smeaDynToggle").checked;
     saveParams();
   });
+  $("clearPromptBtn").addEventListener("click", () => {
+    $("promptInput").value = "";
+    params.prompt = "";
+    updateCounts();
+    saveParams();
+    toast("已清空画面描述", "ok");
+  });
   $("clearNegativeBtn").addEventListener("click", () => {
     $("negativeInput").value = "";
     params.negative = "";
