@@ -1,31 +1,31 @@
 [
   {
     "id": "1",
-    "status": "in_progress",
+    "status": "completed",
     "content": "修复 reuseParams 导入 vibe 编码丢失 Bug",
     "skills": []
   },
   {
     "id": "2",
-    "status": "pending",
+    "status": "completed",
     "content": "buildNaiPayload 补 use_reference_image",
     "skills": []
   },
   {
     "id": "3",
-    "status": "pending",
+    "status": "completed",
     "content": "氛围图卡片编码状态徽标",
     "skills": []
   },
   {
     "id": "4",
-    "status": "pending",
+    "status": "completed",
     "content": "新增「从 PNG 导入 Vibe」按钮",
     "skills": []
   },
   {
     "id": "5",
-    "status": "pending",
+    "status": "completed",
     "content": "构建验证 + dev 预览",
     "skills": []
   }
