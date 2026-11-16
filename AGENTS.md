@@ -16,6 +16,7 @@
 
 ## Lessons
 
+- Vibe 编码批量导出/导入用官方 Export as Encodings 同款 ZIP（每张一个 .naiv4vibe）：js/zip.js 新增 buildZipStore（store 无压缩 + CRC32 + 合法 DOS 日期）与 extractZipEntries（通用解包，支持 store/deflate）；本地头字段偏移（crc=14,csize=18,usize=22,nameLen=26）与中央目录不同，混用会导致解包读到文件名字节
 - 「从 PNG 导入 Vibe」按钮仅提取 PNG 内嵌 vibe 编码加入氛围面板，不动其他参数；纯编码条目（b64 空、仅 encoded）刷新后仍持久化 encoded（saveVibes 对无原图项保留 encoded），卡片显示「Vibe 编码」占位块与编码状态徽标（已编码/已缓存=免费复用，否则生成时编码约 2 Anlas；改信息提取强度会实时刷新徽标，因缓存键含 infoExtracted）
 - V4 请求体在 vibes 非空时发送 use_reference_image: true（官方字段）；氛围过滤条件为 v.b64 || v.encoded（纯编码条目也要能进 payload）
 - 批量文本替换在 Bash heredoc 内联 python 偶发匹配失败（同一字符串单独验证能命中）→ 改用 Write 落盘 patch 脚本再执行，匹配稳定

@@ -1,16 +1,16 @@
 [
   {
-    "content": "查看现有 Vibe 导出/导入实现",
+    "content": "查看 zip.js 是否有打包能力",
     "skills": [],
     "status": "completed"
   },
   {
-    "content": "实现多张 Vibe 编码批量导出（打包 JSON）",
+    "content": "导出改为官方同款 ZIP（多个 .naiv4vibe）",
     "skills": [],
     "status": "completed"
   },
   {
-    "content": "实现多张 Vibe 编码批量导入",
+    "content": "导入支持官方 ZIP 捆绑",
     "skills": [],
     "status": "completed"
   },

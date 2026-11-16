@@ -1135,21 +1135,26 @@ function exportVibeEncoding(idx) {
 }
 
 function exportVibeBundle() {
-  /* 把全部氛围图的编码打包成一个 JSON 捆绑文件 (每条为官方 .naiv4vibe 同构条目) */
-  const entries = [];
+  /* 官方 Export as Encodings 同款: 多张 vibe 打包成一个 ZIP, 每张一个独立 .naiv4vibe */
+  const files = [];
   vibes.forEach((v, idx) => {
     const enc = vibeExportEncoding(v);
-    if (enc) entries.push({ name: "vibe_" + (idx + 1), information_extracted: Number(v.infoExtracted ?? 1), strength: Number(v.referenceStrength ?? 0.6), data: enc });
+    if (!enc) return;
+    const payload = {
+      prompt: "vibe encoding for NAIV4",
+      information_extracted: Number(v.infoExtracted ?? 1),
+      data: enc
+    };
+    files.push({ name: "vibe_" + String(idx + 1).padStart(2, "0") + ".naiv4vibe", data: JSON.stringify(payload) });
   });
-  if (!entries.length) {
+  if (!files.length) {
     toast("没有可导出的编码：请先用当前参数生成一次完成编码, 或导入带编码的 PNG / 编码文件", "warn", 6000);
     return;
   }
-  const payload = { prompt: "vibe encoding for NAIV4", format: "nai-vibe-bundle", version: 1, count: entries.length, vibes: entries };
-  const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
-  downloadBlob(blob, "vibe_bundle_" + entries.length + "_" + Date.now() + ".naiv4vibebundle");
-  const skipped = vibes.length - entries.length;
-  toast(`已导出 ${entries.length} 条编码捆绑文件${skipped ? ` (跳过 ${skipped} 条无编码的)` : ""}, 单文件即可分享导入`, "ok", 6000);
+  const blob = buildZipStore(files);
+  downloadBlob(blob, "vibe_bundle_" + files.length + "_" + Date.now() + ".zip");
+  const skipped = vibes.length - files.length;
+  toast(`已导出 ${files.length} 条编码 ZIP 捆绑 (官方 Export as Encodings 格式, 官方界面可直接导入)${skipped ? `, 跳过 ${skipped} 条无编码的` : ""}`, "ok", 6000);
 }
 
 function vibeBadgeState(v) {
@@ -2104,6 +2109,23 @@ function bindVibePngImport() {
     let added = 0, free = false;
     for (const file of files) {
       try {
+        if (/\.zip$/i.test(file.name) || file.type === "application/zip" || file.type === "application/x-zip-compressed") {
+          /* 官方 Export as Encodings 的 ZIP 捆绑: 解包逐条导入 .naiv4vibe */
+          const entries = await extractZipEntries(await file.arrayBuffer());
+          let zipAdded = 0;
+          for (const en of entries) {
+            if (!/\.naiv4vibe$/i.test(en.name)) continue;
+            let obj = null;
+            try { obj = JSON.parse(await en.blob.text()); } catch (e) { continue; }
+            const enc = obj && (obj.data || obj.encoded || obj.image);
+            if (!enc) continue;
+            if (vibes.length >= vibeLimit()) { toast(`氛围图最多 ${vibeLimit()} 张`, "warn"); break; }
+            vibes.push({ id: crypto.randomUUID(), b64: "", dataUrl: "", encoded: String(enc), infoExtracted: Number(obj.information_extracted ?? obj.infoExtracted ?? 1), referenceStrength: Number(obj.strength ?? obj.referenceStrength ?? 0.6) });
+            free = true; zipAdded++; added++;
+          }
+          if (!zipAdded) toast(file.name + ": ZIP 里没有找到 .naiv4vibe 编码文件", "warn");
+          continue;
+        }
         if (/\.naiv4vibebundle$|bundle/i.test(file.name) || file.type === "application/json") {
           /* 本站捆绑文件: { vibes: [ {information_extracted, strength, data}, ... ] } */
           const obj = JSON.parse(await file.text());
