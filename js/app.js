@@ -589,11 +589,11 @@ function bindImageUpload() {
     const item = e.clipboardData && Array.from(e.clipboardData.items).find((i) => i.type.startsWith("image/"));
     if (!item) return;
     const file = item.getAsFile();
-    /* 焦点/悬落在精准参考区时粘贴到精准参考, 否则按原逻辑 */
+    /* 路由: 精准参考模式下粘贴进精准参考, 否则按原逻辑进氛围图 */
     const inPrecise = document.activeElement && document.activeElement.closest && document.activeElement.closest('[id^="precise"]');
     if (currentAction() === "generate") {
-      if (inPrecise) { addPreciseFiles([file]); toast("已粘贴到精准参考", "ok"); }
-      else addVibeFiles([file]);
+      if (refMode === "precise" || inPrecise) { console.log("[paste] -> precise"); addPreciseFiles([file]); toast("已粘贴到精准参考", "ok"); }
+      else { console.log("[paste] -> vibe"); addVibeFiles([file]); }
     } else {
       loadSourceFile(file);
     }
