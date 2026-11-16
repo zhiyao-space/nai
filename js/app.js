@@ -956,6 +956,33 @@ function bindVibeTransfer() {
     renderVibeList();
     toast("已应用脸部氛围参数：信息提取 0.6 + 参考强度 0.75；保留脸部与人物氛围，不锁具体颜色服饰。若仍串色，可在负向提示词加「same hairstyle, same clothing, hair color as reference」类描述", "ok", 7000);
   });
+  $("comboVibeBtn").addEventListener("click", () => {
+    if (!vibes.length) {
+      toast("先上传至少一张氛围图 (推荐两张: 第1张画风图, 第2张脸部图)", "warn");
+      return;
+    }
+    if (vibes.length === 1) {
+      /* 单图组合: 中档信息提取, 同时拿到画风 + 脸部氛围, 不锁细节 */
+      vibes[0].infoExtracted = 0.5;
+      vibes[0].referenceStrength = 0.75;
+      saveVibes();
+      renderVibeList();
+      toast("单图组合模式：信息提取 0.5 + 参考强度 0.75。想更稳推荐传两张图——第1张画风图、第2张脸部图，再按一次本按钮", "ok", 7000);
+      return;
+    }
+    /* 双图组合 (官方多图加权玩法): 第1张只学画风, 第2张保脸部氛围 */
+    vibes[0].infoExtracted = 0.35;
+    vibes[0].referenceStrength = 0.7;
+    vibes[1].infoExtracted = 0.6;
+    vibes[1].referenceStrength = 0.75;
+    for (let i = 2; i < vibes.length; i++) {
+      vibes[i].infoExtracted = 0.5;
+      vibes[i].referenceStrength = 0.75;
+    }
+    saveVibes();
+    renderVibeList();
+    toast("组合模式已应用：第1张只学画风 (0.35)，第2张保脸部氛围 (0.6)，其余 0.5。可在卡片上单独微调每张", "ok", 7000);
+  });
 }
 
 function addVibeFromDataUrl(dataUrl, label) {
