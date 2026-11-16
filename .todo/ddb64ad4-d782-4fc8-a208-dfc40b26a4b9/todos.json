@@ -1,0 +1,22 @@
+[
+  {
+    "content": "查看现有 Vibe 导出/导入实现",
+    "skills": [],
+    "status": "completed"
+  },
+  {
+    "content": "实现多张 Vibe 编码批量导出（打包 JSON）",
+    "skills": [],
+    "status": "completed"
+  },
+  {
+    "content": "实现多张 Vibe 编码批量导入",
+    "skills": [],
+    "status": "completed"
+  },
+  {
+    "content": "验证 + dev 预览",
+    "skills": [],
+    "status": "completed"
+  }
+]

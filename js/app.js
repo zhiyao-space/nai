@@ -1134,6 +1134,24 @@ function exportVibeEncoding(idx) {
   toast("已导出 .naiv4vibe 编码文件 (官方格式, 别人导入可免编码复用)", "ok", 5000);
 }
 
+function exportVibeBundle() {
+  /* 把全部氛围图的编码打包成一个 JSON 捆绑文件 (每条为官方 .naiv4vibe 同构条目) */
+  const entries = [];
+  vibes.forEach((v, idx) => {
+    const enc = vibeExportEncoding(v);
+    if (enc) entries.push({ name: "vibe_" + (idx + 1), information_extracted: Number(v.infoExtracted ?? 1), strength: Number(v.referenceStrength ?? 0.6), data: enc });
+  });
+  if (!entries.length) {
+    toast("没有可导出的编码：请先用当前参数生成一次完成编码, 或导入带编码的 PNG / 编码文件", "warn", 6000);
+    return;
+  }
+  const payload = { prompt: "vibe encoding for NAIV4", format: "nai-vibe-bundle", version: 1, count: entries.length, vibes: entries };
+  const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
+  downloadBlob(blob, "vibe_bundle_" + entries.length + "_" + Date.now() + ".naiv4vibebundle");
+  const skipped = vibes.length - entries.length;
+  toast(`已导出 ${entries.length} 条编码捆绑文件${skipped ? ` (跳过 ${skipped} 条无编码的)` : ""}, 单文件即可分享导入`, "ok", 6000);
+}
+
 function vibeBadgeState(v) {
   /* 编码状态: v.encoded 为导入/已注入的编码; 否则查编码缓存 (命中则生成时不重复扣费) */
   if (v.encoded) return { text: "已编码 · 免费复用", cls: "ok" };
@@ -2077,40 +2095,70 @@ function bindVibePngImport() {
   const input = $("vibePngInput");
   if (!input) return;
   $("importVibePngBtn").addEventListener("click", () => input.click());
+  const bundleBtn = $("exportVibeBundleBtn");
+  if (bundleBtn) bundleBtn.addEventListener("click", exportVibeBundle);
   input.addEventListener("change", async () => {
-    const file = input.files && input.files[0];
+    const files = Array.from(input.files || []);
     input.value = "";
-    if (!file) return;
-    try {
-      const meta = commentToMeta(await readPngMetadata(file));
-      const list = (meta && Array.isArray(meta.vibes)) ? meta.vibes.filter((v) => v.b64 || v.encoded) : [];
-      if (!list.length) {
-        if (meta && (meta.prompt || meta.width)) {
-          toast("这张图有生成参数, 但生成时氛围面板是空的, 所以没嵌入 Vibe 数据。请在生成它之前先添加氛围图, 或导入官方带 Vibe 的 PNG", "warn", 6500);
-        } else {
-          toast("该 PNG 未内嵌生成参数和 Vibe 数据 (可能被微信/QQ/截图二次压缩破坏, 请用浏览器里下载按钮保存的原始 PNG)", "warn", 6500);
+    if (!files.length) return;
+    let added = 0, free = false;
+    for (const file of files) {
+      try {
+        if (/\.naiv4vibebundle$|bundle/i.test(file.name) || file.type === "application/json") {
+          /* 本站捆绑文件: { vibes: [ {information_extracted, strength, data}, ... ] } */
+          const obj = JSON.parse(await file.text());
+          const list = Array.isArray(obj && obj.vibes) ? obj.vibes : (obj && (obj.data || obj.encoded || obj.image) ? [obj] : []);
+          if (!list.length) { toast(file.name + ": 没有可导入的编码条目", "warn"); continue; }
+          for (const v of list) {
+            const enc = v && (v.data || v.encoded || v.image);
+            if (!enc) continue;
+            if (vibes.length >= vibeLimit()) { toast(`氛围图最多 ${vibeLimit()} 张`, "warn"); break; }
+            vibes.push({ id: crypto.randomUUID(), b64: "", dataUrl: "", encoded: String(enc), infoExtracted: Number(v.information_extracted ?? v.infoExtracted ?? 1), referenceStrength: Number(v.strength ?? v.referenceStrength ?? 0.6) });
+            free = true; added++;
+          }
+          continue;
         }
-        return;
+        if (/\.naiv4vibe$/i.test(file.name)) {
+          /* 官方单条编码文件 */
+          const obj = JSON.parse(await file.text());
+          const enc = obj && (obj.data || obj.encoded || obj.image);
+          if (!enc) { toast(file.name + ": 编码文件里没有 data 字段", "warn"); continue; }
+          if (vibes.length >= vibeLimit()) { toast(`氛围图最多 ${vibeLimit()} 张`, "warn"); break; }
+          vibes.push({ id: crypto.randomUUID(), b64: "", dataUrl: "", encoded: String(enc), infoExtracted: Number(obj.information_extracted ?? obj.infoExtracted ?? 1), referenceStrength: Number(obj.strength ?? obj.referenceStrength ?? 0.6) });
+          free = true; added++;
+          continue;
+        }
+        const meta = commentToMeta(await readPngMetadata(file));
+        const list = (meta && Array.isArray(meta.vibes)) ? meta.vibes.filter((v) => v.b64 || v.encoded) : [];
+        if (!list.length) {
+          if (meta && (meta.prompt || meta.width)) {
+            toast(file.name + ": 有生成参数但没内嵌 Vibe 数据 (生成它之前氛围面板是空的)", "warn", 6500);
+          } else {
+            toast(file.name + ": 未内嵌生成参数和 Vibe 数据 (可能被微信/QQ/截图二次压缩破坏)", "warn", 6500);
+          }
+          continue;
+        }
+        for (const v of list) {
+          if (vibes.length >= vibeLimit()) { toast(`氛围图最多 ${vibeLimit()} 张`, "warn"); break; }
+          vibes.push({
+            id: crypto.randomUUID(),
+            b64: v.b64 || "",
+            dataUrl: v.b64 ? "data:image/png;base64," + v.b64 : "",
+            encoded: v.encoded || undefined,
+            infoExtracted: v.infoExtracted ?? 1,
+            referenceStrength: v.referenceStrength ?? 0.6
+          });
+          if (v.encoded) free = true;
+          added++;
+        }
+      } catch (e) {
+        toast("读取 " + file.name + " 失败: " + (e.message || e), "error");
       }
-      let added = 0, free = false;
-      for (const v of list) {
-        if (vibes.length >= vibeLimit()) { toast(`氛围图最多 ${vibeLimit()} 张`, "warn"); break; }
-        vibes.push({
-          id: crypto.randomUUID(),
-          b64: v.b64 || "",
-          dataUrl: v.b64 ? "data:image/png;base64," + v.b64 : "",
-          encoded: v.encoded || undefined,
-          infoExtracted: v.infoExtracted ?? 1,
-          referenceStrength: v.referenceStrength ?? 0.6
-        });
-        if (v.encoded) free = true;
-        added++;
-      }
+    }
+    if (added) {
       renderVibeList();
       saveVibes();
-      if (added) toast(`已导入 ${added} 条 Vibe${free ? " (含编码, 免费复用无需重新编码)" : ""}`, "ok");
-    } catch (e) {
-      toast("读取 PNG 元数据失败: " + (e.message || e), "error");
+      toast(`已导入 ${added} 条 Vibe${free ? " (含编码, 免费复用无需重新编码)" : ""}`, "ok");
     }
   });
 }
