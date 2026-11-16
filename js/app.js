@@ -1317,9 +1317,10 @@ function bindPrecise() {
   if (!box || !input) return;
   input.addEventListener("click", (e) => e.stopPropagation());
   input.addEventListener("change", () => {
-    const files = input.files;
+    /* 华为等机型的 DocumentsUI 响应慢, 必须先读 files 再清 value, 否则 FileList 失效变空 */
+    if (input.files && input.files.length) addPreciseFiles(Array.from(input.files));
+    else toast("选图器没有带回文件, 请重试一次, 或改用 Ctrl+V 粘贴", "warn", 5000);
     input.value = "";
-    addPreciseFiles(files);
   });
   box.addEventListener("dragover", (e) => { e.preventDefault(); box.classList.add("drag"); });
   box.addEventListener("dragleave", () => box.classList.remove("drag"));
