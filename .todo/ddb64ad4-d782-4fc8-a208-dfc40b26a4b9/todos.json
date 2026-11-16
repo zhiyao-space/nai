@@ -1,6 +1,6 @@
 [
   {
-    "content": "彻底移除精准参考上传过滤（华为机型兼容）",
+    "content": "定位并修复 change 先清 value 导致 FileList 失效",
     "skills": [],
     "status": "completed"
   },
