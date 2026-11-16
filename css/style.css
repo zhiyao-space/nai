@@ -1396,3 +1396,10 @@ body.view-history .panel-right { display: flex; }
 .precise-item input[type="number"] { width: 58px; flex: none; background: #1c1c1c; color: #ddd; border: 1px solid #3a3a3a; border-radius: 8px; padding: 6px; font-size: 12px; }
 .precise-label { flex: none; font-size: 11px; color: #888; }
 .precise-item .icon-btn { flex: none; }
+
+/* ---------- 参考模式切换 (氛围转移 / 精准参考) ---------- */
+.ref-mode-switch { display: flex; gap: 0; background: #1c1c1c; border: 1px solid #333; border-radius: 12px; padding: 4px; }
+.ref-mode-btn { flex: 1; border: none; background: transparent; color: #999; font-size: 13px; padding: 8px 10px; border-radius: 9px; cursor: pointer; transition: background .15s, color .15s; white-space: nowrap; }
+.ref-mode-btn:hover { color: #ddd; }
+.ref-mode-btn.active { background: #2e2e2e; color: #fff; font-weight: 600; box-shadow: inset 0 0 0 1px #454545; }
+@media (max-width: 640px) { .ref-mode-btn { font-size: 12px; padding: 7px 6px; } }

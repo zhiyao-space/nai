@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NovelAI 图像生成</title>
-<link rel="stylesheet" href="css/style.css?v=20261115c">
+<link rel="stylesheet" href="css/style.css?v=20261116a">
 </head>
 <body>
 
@@ -57,7 +57,14 @@
         <textarea id="negativeInput" rows="3" spellcheck="false" placeholder="不想出现的东西（开启自动排除瑕疵时留空就行）"></textarea>
       </section>
 
-      <section class="card collapsible open" data-collapsible>
+      <section class="card" id="refModeCard">
+        <div class="ref-mode-switch" id="refModeSwitch" role="tablist">
+          <button type="button" class="ref-mode-btn active" data-mode="vibe" title="上传参考图学画风/色调/构图 (Vibe Transfer)">🎨 氛围转移</button>
+          <button type="button" class="ref-mode-btn" data-mode="precise" title="官方 V4.5: 直接参考角色长相或画风 (Precise Reference)">🎯 精准参考 (V4.5)</button>
+        </div>
+      </section>
+
+      <section class="card collapsible open" data-collapsible id="vibeSection">
         <div class="card-title clickable" data-collapse-toggle>
           <span>氛围转移 (Vibe Transfer) <button class="hint-btn" title="这是什么？">?</button></span>
           <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
@@ -80,7 +87,7 @@
         </div>
       </section>
 
-      <section class="card collapsible open" data-collapsible>
+      <section class="card collapsible open hidden" data-collapsible id="preciseSection">
         <div class="card-title clickable" data-collapse-toggle>
           <span>精准参考 (Precise Reference) <button class="hint-btn" title="这是什么？">?</button></span>
           <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
@@ -462,6 +469,6 @@
 <script src="js/db.js?v=20261110g"></script>
 <script src="js/api.js?v=20261116b"></script>
 <script src="js/pngmeta.js?v=20261115c"></script>
-<script src="js/app.js?v=20261116b"></script>
+<script src="js/app.js?v=20261116c"></script>
 </body>
 </html>

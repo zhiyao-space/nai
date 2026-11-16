@@ -64,6 +64,8 @@ let maskDirty = false;
 const VIBE_LIMIT = 4; /* 空悲切中转站: Vibe Transfer 最多 4 张 (官方 5 张, 以中转站为准) */
 const LS_VIBES = "nai_clone_vibes";
 const LS_PRECISE = "nai_clone_precise_refs_v1";
+const LS_REF_MODE = "nai_ref_mode_v1";
+let refMode = "vibe";
 let preciseRefs = [];
 
 /* 精准参考 (Precise Reference, 官方 V4.5): 上限 4 张, 与氛围转移互斥 */
@@ -1324,6 +1326,36 @@ function bindPrecise() {
   renderPreciseList();
 }
 
+/* ---------- 参考模式切换 (氛围转移 / 精准参考, 官方互斥) ---------- */
+function setRefMode(mode) {
+  refMode = (mode === "precise") ? "precise" : "vibe";
+  try { localStorage.setItem(LS_REF_MODE, refMode); } catch (e) {}
+  const vs = $("vibeSection"), ps = $("preciseSection");
+  if (vs) vs.classList.toggle("hidden", refMode !== "vibe");
+  if (ps) ps.classList.toggle("hidden", refMode !== "precise");
+  document.querySelectorAll("#refModeSwitch .ref-mode-btn").forEach((b) => {
+    b.classList.toggle("active", b.dataset.mode === refMode);
+  });
+  console.log("[refmode]", refMode);
+}
+
+function bindRefMode() {
+  try { refMode = localStorage.getItem(LS_REF_MODE) === "precise" ? "precise" : "vibe"; } catch (e) {}
+  const sw = $("refModeSwitch");
+  if (sw) {
+    sw.addEventListener("click", (e) => {
+      const btn = e.target.closest(".ref-mode-btn");
+      if (!btn) return;
+      const next = btn.dataset.mode;
+      if (next !== refMode) {
+        setRefMode(next);
+        toast(next === "precise" ? "已切换到精准参考 (V4.5): 生成时只发送精准参考图" : "已切换到氛围转移: 生成时只发送氛围图", "ok");
+      }
+    });
+  }
+  setRefMode(refMode);
+}
+
 function updateVibeHints() {
   const hint = $("vibeHint");
   const msgs = [];
@@ -2551,6 +2583,7 @@ function init() {
   bindMaskEditor();
   bindVibeTransfer();
   bindPrecise();
+  bindRefMode();
   bindVibePresets();
   bindTranslateButtons();
   bindSizeControls();

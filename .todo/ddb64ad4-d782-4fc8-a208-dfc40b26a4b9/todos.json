@@ -1,11 +1,11 @@
 [
   {
-    "content": "排查精准参考上传与 payload 注入逻辑",
+    "content": "排查精准参考面板不显示的原因",
     "skills": [],
     "status": "completed"
   },
   {
-    "content": "修复发现的问题（互斥/上传/隐藏逻辑）",
+    "content": "改造 UI：氛围转移/精准参考模式切换",
     "skills": [],
     "status": "completed"
   },

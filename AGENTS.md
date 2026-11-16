@@ -20,6 +20,7 @@
 - 「从 PNG 导入 Vibe」按钮仅提取 PNG 内嵌 vibe 编码加入氛围面板，不动其他参数；纯编码条目（b64 空、仅 encoded）刷新后仍持久化 encoded（saveVibes 对无原图项保留 encoded），卡片显示「Vibe 编码」占位块与编码状态徽标（已编码/已缓存=免费复用，否则生成时编码约 2 Anlas；改信息提取强度会实时刷新徽标，因缓存键含 infoExtracted）
 - V4 请求体在 vibes 非空时发送 use_reference_image: true（官方字段）；氛围过滤条件为 v.b64 || v.encoded（纯编码条目也要能进 payload）
 - 批量文本替换在 Bash heredoc 内联 python 偶发匹配失败（同一字符串单独验证能命中）→ 改用 Write 落盘 patch 脚本再执行，匹配稳定
+- 参考图 UI 为单选切换模式（#refModeSwitch 分段控件，localStorage nai_ref_mode_v1）：氛围转移/精准参考两块 section 互斥显隐，切换只改 UI 可见性，数据两套都保留在 localStorage
 - 精准参考 (director_reference_*) 与氛围转移互斥：payload 里同时存在时只发 director 字段，且必须把 reference_image_multiple / normalize_reference_strength_multiple 一并省略（发空数组会 400）；director 走原始 base64 无需 encode-vibe，requestGeneration 里要跳过氛围编码
 - 空悲切中转站的 `reference_image_multiple` 只接受 `/v1/ai/encode-vibe` 编码后的 Vibe 二进制，原始图片 Base64 会报 400 INVALID_NATIVE_REQUEST；生成前须先编码，编码结果按「图片+强度+模型」本地缓存复用（编码收费约 2 Anlas/次）
 - 官方下载的 PNG 自带 Vibe 编码是官方**前端**在下载时用 stealth alpha 隐写写入的（stealth_pngcomp：gzip JSON 列优先写入 alpha 最低位），后端返回的是裸图；本站 downloadImage 用 js/pngmeta.js embedPngMetadata 复现（JSON 内 vibes[].data=编码二进制 base64 为官方复用格式）
