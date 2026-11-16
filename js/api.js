@@ -177,25 +177,29 @@ function buildNaiPayload(p) {
     const chars = (p.characters || []).filter((c) => c.prompt && c.prompt.trim());
     const useCoords = !!p.useCoords && chars.length > 0;
     const refs = (p.preciseRefs || []).filter((r) => r && r.b64);
-    const vibes = (p.vibes || []).filter((v) => (v.b64 || v.encoded) && !refs.length); /* 官方: 精准参考与氛围转移互斥 */
+    /* 官方: 精准参考与氛围转移互斥, 同时存在时只发送精准参考 */
+    const vibes = refs.length ? [] : (p.vibes || []).filter((v) => v.b64 || v.encoded);
  if (vibes.length) params.use_reference_image = true; /* 官方 V4 请求体: 有氛围图时置位 */
 
     params.negative_prompt = ucp;
     params.use_coords = useCoords;
-    params.normalize_reference_strength_multiple = true;
     params.legacy_uc = false;
     params.image_format = "png";
     if (refs.length) {
       /* Precise Reference (官方 V4.5): director_reference_* 字段, secondary = 1 - fidelity */
+      console.log("[precise] payload: director_reference x", refs.length, "vibes suppressed:", (p.vibes || []).length);
       params.director_reference_images = refs.map((r) => r.b64);
       params.director_reference_descriptions = refs.map((r) => ({ caption: { base_caption: r.type || "character", char_captions: [] }, legacy_uc: false }));
       params.director_reference_information_extracted = refs.map(() => 1);
       params.director_reference_strength_values = refs.map((r) => Number(r.strength ?? 1));
       params.director_reference_secondary_strength_values = refs.map((r) => 1 - Number(r.fidelity ?? 1));
     }
-    params.reference_image_multiple = vibes.map((v) => v.encoded || v.b64);
-    params.reference_information_extracted_multiple = vibes.map((v) => Number(v.infoExtracted ?? 1));
-    params.reference_strength_multiple = vibes.map((v) => Number(v.referenceStrength ?? 0.6));
+    if (vibes.length) {
+      params.normalize_reference_strength_multiple = true;
+      params.reference_image_multiple = vibes.map((v) => v.encoded || v.b64);
+      params.reference_information_extracted_multiple = vibes.map((v) => Number(v.infoExtracted ?? 1));
+      params.reference_strength_multiple = vibes.map((v) => Number(v.referenceStrength ?? 0.6));
+    }
 
     params.characterPrompts = chars.map((c) => ({
       prompt: c.prompt.trim(),
@@ -480,8 +484,15 @@ async function requestGeneration(cfg, params, signal) {
      OpenAI Images 端点不支持氛围字段, 带氛围图时改走原生端点 */
   const hasRefs = (params.vibes || []).some((v) => v && v.b64) || (params.preciseRefs || []).some((r) => r && r.b64);
   if (hasRefs) {
-    await ensureVibesEncoded(cfg, params, signal);
-    if (cfg.format === "openai") return generateNai(cfg, buildNaiPayload(params), signal);
+    /* 精准参考走原始 base64 (director_reference_images), 无需 encode-vibe; 只在有氛围图时编码 */
+    if ((params.preciseRefs || []).some((r) => r && r.b64) && !(params.vibes || []).some((v) => v && v.b64)) {
+      /* 仅精准参考: 跳过氛围编码, 直接走原生端点 */
+      console.log("[precise] only director refs, skip vibe encode");
+      if (cfg.format === "openai") return generateNai(cfg, buildNaiPayload(params), signal);
+    } else {
+      await ensureVibesEncoded(cfg, params, signal);
+      if (cfg.format === "openai") return generateNai(cfg, buildNaiPayload(params), signal);
+    }
   }
   const payload = cfg.format === "openai" ? buildOpenAiPayload(params) : buildNaiPayload(params);
   return cfg.format === "openai" ? generateOpenai(cfg, payload, signal) : generateNai(cfg, payload, signal);

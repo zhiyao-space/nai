@@ -586,8 +586,11 @@ function bindImageUpload() {
     const item = e.clipboardData && Array.from(e.clipboardData.items).find((i) => i.type.startsWith("image/"));
     if (!item) return;
     const file = item.getAsFile();
+    /* 焦点/悬落在精准参考区时粘贴到精准参考, 否则按原逻辑 */
+    const inPrecise = document.activeElement && document.activeElement.closest && document.activeElement.closest('[id^="precise"]');
     if (currentAction() === "generate") {
-      addVibeFiles([file]);
+      if (inPrecise) { addPreciseFiles([file]); toast("已粘贴到精准参考", "ok"); }
+      else addVibeFiles([file]);
     } else {
       loadSourceFile(file);
     }
@@ -1237,6 +1240,9 @@ function renderVibeList() {
 function addPreciseFiles(files) {
   const list = Array.from(files || []).filter((f) => /^image\//.test(f.type));
   if (!list.length) return;
+  console.log("[precise] add files:", list.length);
+  if (vibes.length) toast("注意: 精准参考与氛围转移互斥, 生成时只会发送精准参考, 氛围图将被忽略", "warn", 6000);
+  if (typeof isV45 === "function" && !isV45(effectiveModel())) toast("精准参考仅 V4.5 系模型生效, 当前模型可能不支持 director_reference 字段", "warn", 6000);
   for (const file of list) {
     if (preciseRefs.length >= PRECISE_LIMIT) { toast(`精准参考最多 ${PRECISE_LIMIT} 张`, "warn"); break; }
     const reader = new FileReader();

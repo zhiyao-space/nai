@@ -1,16 +1,11 @@
 [
   {
-    "content": "查看 zip.js 是否有打包能力",
+    "content": "排查精准参考上传与 payload 注入逻辑",
     "skills": [],
     "status": "completed"
   },
   {
-    "content": "导出改为官方同款 ZIP（多个 .naiv4vibe）",
-    "skills": [],
-    "status": "completed"
-  },
-  {
-    "content": "导入支持官方 ZIP 捆绑",
+    "content": "修复发现的问题（互斥/上传/隐藏逻辑）",
     "skills": [],
     "status": "completed"
   },
