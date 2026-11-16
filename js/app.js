@@ -653,7 +653,7 @@ function loadSourceFile(file) {
       initMaskCanvas();
       toast(`源图已加载 ${scaled.w}x${scaled.h}，尺寸已同步（大图已自动压缩）`, "ok");
     } catch (e) {
-      toast("图片读取失败", "error");
+      toast("图片读取失败: 手机相机拍的 HEIC/HEIF 格式浏览器解不了, 请转成 JPG/PNG 再试 (文件: " + (file.name||"") + ")", "error", 7000);
     }
   };
   reader.onerror = () => toast("图片读取失败", "error");
@@ -1241,11 +1241,11 @@ function renderVibeList() {
 }
 
 function addPreciseFiles(files) {
-  /* 安卓/华为等机型相册选图 file.type 可能为空串, 不能只靠 MIME 过滤; 用扩展名兜底 */
-  const list = Array.from(files || []).filter((f) => !f.type || /^image\//.test(f.type) || /\.(png|jpe?g|webp|gif|bmp)$/i.test(f.name));
-  if (!list.length) { toast("未识别到图片文件 (支持 png/jpg/webp)", "warn"); return; }
-  console.log("[precise] add files:", list.length, list.map((f) => f.name + "/" + f.type).join(", "));
-  if (vibes.length) toast("注意: 精准参考与氛围转移互斥, 生成时只会发送精准参考, 氛围图将被忽略", "warn", 6000);
+ /* 安卓/华为机型 file.type 常为空串且文件名可能是 .heic/无扩展名, 与 addVibeFiles 保持一致: 不过滤, 交给解码失败时报错 */
+ const list = Array.from(files || []).filter(Boolean);
+ if (!list.length) { toast("没有收到文件, 请重新选择", "warn"); return; }
+ console.log("[precise] add files:", list.length, list.map((f) => f.name + "|" + f.type).join(", "));
+   if (vibes.length) toast("注意: 精准参考与氛围转移互斥, 生成时只会发送精准参考, 氛围图将被忽略", "warn", 6000);
   if (typeof isV45 === "function" && !isV45(effectiveModel())) toast("精准参考仅 V4.5 系模型生效, 当前模型可能不支持 director_reference 字段", "warn", 6000);
   for (const file of list) {
     if (preciseRefs.length >= PRECISE_LIMIT) { toast(`精准参考最多 ${PRECISE_LIMIT} 张`, "warn"); break; }

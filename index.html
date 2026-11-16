@@ -95,7 +95,7 @@
         <p class="hint-text hidden">官方 V4.5 专属：直接参考图片里的「角色长相」或「画风本身」，比氛围转移更精准还原。每张图可选类型（角色 / 风格 / 角色+风格），并调「强度」(对画面影响多大) 与「保真度」(参考执行多严格)。与氛围转移互斥（同时存在时只发送精准参考）；与图生图 / 局部重绘可叠加；仅 V4.5 系模型生效，中转站每次生成每张参考加收约 5 Anlas。推荐用干净立绘、大尺寸 (1024x1536 等) 参考图。</p>
         <div class="collapsible-body">
  <label class="upload-box vibe-upload" id="preciseUploadBox" for="preciseFileInput">
-            <input type="file" id="preciseFileInput" accept="image/png, image/jpeg, image/webp" multiple class="hidden">
+            <input type="file" id="preciseFileInput" accept="image/*" multiple class="hidden">
             <div class="upload-empty" id="preciseUploadEmpty">点这里选图 · 拖拽 · Ctrl+V 粘贴 (最多 4 张)</div>
  </label>
           <div id="preciseList" class="precise-list"></div>
@@ -469,6 +469,6 @@
 <script src="js/db.js?v=20261110g"></script>
 <script src="js/api.js?v=20261116b"></script>
 <script src="js/pngmeta.js?v=20261115c"></script>
-<script src="js/app.js?v=20261116g"></script>
+<script src="js/app.js?v=20261116i"></script>
 </body>
 </html>
