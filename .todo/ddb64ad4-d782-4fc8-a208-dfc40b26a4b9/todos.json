@@ -1,11 +1,11 @@
 [
   {
-    "content": "定位精准参考不显示图真正根因（file.type 为空被过滤）",
+    "content": "彻底移除精准参考上传过滤（华为机型兼容）",
     "skills": [],
     "status": "completed"
   },
   {
-    "content": "修复 + 验证 + 推送 main",
+    "content": "验证 + 推送 main",
     "skills": [],
     "status": "completed"
   }
