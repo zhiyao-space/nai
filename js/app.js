@@ -116,7 +116,8 @@ function loadState() {
     const v = JSON.parse(localStorage.getItem(LS_VIBES) || "null");
     if (Array.isArray(v)) vibes = v.filter((x) => x && x.b64).slice(0, VIBE_LIMIT);
     const pr = JSON.parse(localStorage.getItem(LS_PRECISE) || "null");
-    if (Array.isArray(pr)) preciseRefs = pr.filter((x) => x && x.b64).slice(0, PRECISE_LIMIT);
+    if (Array.isArray(pr)) preciseRefs = pr.filter((x) => x && x.b64).slice(0, PRECISE_LIMIT)
+      .map((x) => ({ ...x, dataUrl: x.dataUrl || ("data:image/png;base64," + x.b64) }));
   } catch (e) {}
 }
 
@@ -1253,9 +1254,10 @@ function addPreciseFiles(files) {
         const scaled = await downscaleToMax(String(reader.result), 1536);
         const png = await ensurePngDataUrl(scaled.dataUrl);
         preciseRefs.push({ id: uid(), b64: png.split(",")[1] || "", dataUrl: png, type: "character", strength: 1, fidelity: 1 });
+        console.log("[precise] added entry:", preciseRefs.length, "/", PRECISE_LIMIT, "size:", Math.round(png.length / 1024), "KB");
         savePrecise();
         renderPreciseList();
-      } catch (e) { toast(e.message || "图片处理失败", "error"); }
+      } catch (e) { console.error("[precise] process failed:", e); toast(e.message || "图片处理失败", "error"); }
     };
     reader.readAsDataURL(file);
   }
@@ -1273,8 +1275,9 @@ function renderPreciseList() {
     const row = document.createElement("div");
     row.className = "precise-item";
     const img = document.createElement("img");
-    img.src = r.dataUrl;
+    img.src = r.dataUrl || (r.b64 ? "data:image/png;base64," + r.b64 : "");
     img.alt = "";
+    if (!img.src) console.warn("[precise] entry missing both dataUrl and b64, thumbnail empty:", r.id);
     const typeSel = document.createElement("select");
     for (const [val, label] of PRECISE_TYPES) {
       const opt = document.createElement("option");
