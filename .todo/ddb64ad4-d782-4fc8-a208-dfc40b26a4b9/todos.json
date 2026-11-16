@@ -1,11 +1,11 @@
 [
   {
-    "content": "定位精准参考不显示图的真正原因",
+    "content": "定位精准参考不显示图真正根因（file.type 为空被过滤）",
     "skills": [],
     "status": "completed"
   },
   {
-    "content": "修复粘贴路由 + 推送 main",
+    "content": "修复 + 验证 + 推送 main",
     "skills": [],
     "status": "completed"
   }
