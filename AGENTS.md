@@ -24,6 +24,7 @@
 - 全局 Ctrl+V 粘贴要按当前参考模式 (refMode) 分流：此前固定进氛围图，导致精准参考模式下粘贴的图「消失」进隐藏面板
 - localStorage 恢复的历史条目字段要补全：精准参考早期条目只存 b64 无 dataUrl，缩略图渲染直接 img.src=r.dataUrl 会图裂/空白，加载时需 map 补 dataUrl 或渲染时兜底 data:image/png;base64,+b64
 - 参考图 UI 为单选切换模式（#refModeSwitch 分段控件，localStorage nai_ref_mode_v1）：氛围转移/精准参考两块 section 互斥显隐，切换只改 UI 可见性，数据两套都保留在 localStorage
+- 精准参考卡片 (renderPreciseList) 为竖版结构：模式分段(.seg-btn)+用途说明、Strength(-1~1)/Fidelity(0~1) 滑块(.pr-slider)+数值框、风格感知开关(仅非 style 模式显示，编码进 director_reference_descriptions 的 base_caption 后缀)、模式切换未手动调参时自动填推荐值；费用提示 #preciseCostHint 按张数动态更新
 - 精准参考 (director_reference_*) 与氛围转移互斥：payload 里同时存在时只发 director 字段，且必须把 reference_image_multiple / normalize_reference_strength_multiple 一并省略（发空数组会 400）；director 走原始 base64 无需 encode-vibe，requestGeneration 里要跳过氛围编码
 - 空悲切中转站的 `reference_image_multiple` 只接受 `/v1/ai/encode-vibe` 编码后的 Vibe 二进制，原始图片 Base64 会报 400 INVALID_NATIVE_REQUEST；生成前须先编码，编码结果按「图片+强度+模型」本地缓存复用（编码收费约 2 Anlas/次）
 - 官方下载的 PNG 自带 Vibe 编码是官方**前端**在下载时用 stealth alpha 隐写写入的（stealth_pngcomp：gzip JSON 列优先写入 alpha 最低位），后端返回的是裸图；本站 downloadImage 用 js/pngmeta.js embedPngMetadata 复现（JSON 内 vibes[].data=编码二进制 base64 为官方复用格式）
