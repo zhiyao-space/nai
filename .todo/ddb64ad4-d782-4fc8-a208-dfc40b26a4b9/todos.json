@@ -1,12 +1,17 @@
 [
   {
-    "content": "定位并修复 change 先清 value 导致 FileList 失效",
+    "content": "重写 renderPreciseList 竖版卡片（滑块/开关/预设）",
     "skills": [],
     "status": "completed"
   },
   {
-    "content": "验证 + 推送 main",
+    "content": "api.js styleAware 编码 + 费用提示 + 样式",
     "skills": [],
     "status": "completed"
+  },
+  {
+    "content": "验证 + 截图 + 推送 main",
+    "skills": [],
+    "status": "in_progress"
   }
 ]

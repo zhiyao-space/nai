@@ -1269,46 +1269,97 @@ function removePreciseRef(id) {
   if (idx >= 0) { preciseRefs.splice(idx, 1); savePrecise(); renderPreciseList(); }
 }
 
+const PRECISE_PRESETS = { "character": { s: 0.6, f: 0.7 }, "style": { s: 0.8, f: 0.6 }, "character&style": { s: 0.7, f: 0.7 } };
+const PRECISE_MODE_DESCS = {
+  "character": "角色参考 — 复现参考图角色的脸/发型/服装/体型, 固定原创角色",
+  "style": "风格参考 — 锁定整体画风/笔触/色调, 角色可换",
+  "character&style": "角色+风格 — 一次性复现「某个角色的某种画风」"
+};
+
+function makePrSlider(label, min, max, val, onInput, onCommit) {
+  const row = document.createElement("div"); row.className = "pr-slider-row";
+  const lab = document.createElement("span"); lab.className = "precise-label"; lab.textContent = label;
+  const range = document.createElement("input"); range.type = "range"; range.className = "pr-slider";
+  range.min = String(min); range.max = String(max); range.step = "0.05"; range.value = String(val);
+  const num = document.createElement("input"); num.type = "number"; num.className = "pr-val";
+  num.min = String(min); num.max = String(max); num.step = "0.05"; num.value = String(val);
+  range.addEventListener("input", () => { num.value = range.value; onInput(+range.value); });
+  range.addEventListener("change", () => onCommit(+range.value));
+  num.addEventListener("change", () => { let v = Math.min(max, Math.max(min, +num.value || 0)); num.value = String(v); range.value = String(v); onInput(v); onCommit(v); });
+  row.appendChild(lab); row.appendChild(range); row.appendChild(num);
+  return { row, range, num };
+}
+
 function renderPreciseList() {
   const wrap = $("preciseList");
   wrap.innerHTML = "";
   for (const r of preciseRefs) {
-    const row = document.createElement("div");
-    row.className = "precise-item";
+    if (r.styleAware === undefined) r.styleAware = true;
+    if (r.manualTuned === undefined) r.manualTuned = false;
+    const card = document.createElement("div"); card.className = "precise-card";
+
+    const head = document.createElement("div"); head.className = "pr-head";
     const img = document.createElement("img");
     img.src = r.dataUrl || (r.b64 ? "data:image/png;base64," + r.b64 : "");
-    img.alt = "";
+    img.className = "precise-thumb"; img.alt = "";
     if (!img.src) console.warn("[precise] entry missing both dataUrl and b64, thumbnail empty:", r.id);
-    const typeSel = document.createElement("select");
+    head.appendChild(img);
+
+    const headRight = document.createElement("div"); headRight.className = "pr-head-right";
+    const seg = document.createElement("div"); seg.className = "seg pr-mode-seg";
     for (const [val, label] of PRECISE_TYPES) {
-      const opt = document.createElement("option");
-      opt.value = val; opt.textContent = label;
-      typeSel.appendChild(opt);
+      const b = document.createElement("button"); b.type = "button"; b.className = "seg-btn" + ((r.type || "character") === val ? " active" : "");
+      b.textContent = label.split(" ")[0];
+      b.addEventListener("click", () => {
+        if (r.type === val) return;
+        r.type = val;
+        if (!r.manualTuned) { const p = PRECISE_PRESETS[val]; r.strength = p.s; r.fidelity = p.f; }
+        savePrecise(); renderPreciseList();
+      });
+      seg.appendChild(b);
     }
-    typeSel.value = r.type || "character";
-    typeSel.addEventListener("change", () => { r.type = typeSel.value; savePrecise(); });
-    const strengthInp = document.createElement("input");
-    strengthInp.type = "number"; strengthInp.min = "-1"; strengthInp.max = "1"; strengthInp.step = "0.05";
-    strengthInp.value = r.strength ?? 1; strengthInp.title = "强度 (对画面影响多大)";
-    strengthInp.addEventListener("change", () => { r.strength = +strengthInp.value; savePrecise(); });
-    const fidInp = document.createElement("input");
-    fidInp.type = "number"; fidInp.min = "0"; fidInp.max = "1"; fidInp.step = "0.05";
-    fidInp.value = r.fidelity ?? 1; fidInp.title = "保真度 (参考执行多严格)";
-    fidInp.addEventListener("change", () => { r.fidelity = +fidInp.value; savePrecise(); });
+    headRight.appendChild(seg);
+    const desc = document.createElement("div"); desc.className = "pr-mode-desc";
+    desc.textContent = PRECISE_MODE_DESCS[r.type || "character"];
+    headRight.appendChild(desc);
+    head.appendChild(headRight);
+
     const del = document.createElement("button");
-    del.className = "icon-btn"; del.textContent = "✕"; del.title = "移除";
+    del.className = "icon-btn pr-del"; del.textContent = "✕"; del.title = "移除";
     del.addEventListener("click", () => removePreciseRef(r.id));
-    const lab1 = document.createElement("span"); lab1.className = "precise-label"; lab1.textContent = "强度";
-    const lab2 = document.createElement("span"); lab2.className = "precise-label"; lab2.textContent = "保真";
-    row.appendChild(img);
-    row.appendChild(typeSel);
-    row.appendChild(lab1); row.appendChild(strengthInp);
-    row.appendChild(lab2); row.appendChild(fidInp);
-    row.appendChild(del);
-    wrap.appendChild(row);
+    head.appendChild(del);
+    card.appendChild(head);
+
+    const tune = () => { r.manualTuned = true; savePrecise(); };
+    const sRow = makePrSlider("强度", -1, 1, r.strength ?? 1, (v) => { r.strength = v; }, tune);
+    const fRow = makePrSlider("保真", 0, 1, r.fidelity ?? 1, (v) => { r.fidelity = v; }, tune);
+    sRow.range.addEventListener("input", () => { r.strength = +sRow.range.value; });
+    fRow.range.addEventListener("input", () => { r.fidelity = +fRow.range.value; });
+    sRow.num.addEventListener("change", tune); fRow.num.addEventListener("change", tune);
+    card.appendChild(sRow.row); card.appendChild(fRow.row);
+
+    if ((r.type || "character") !== "style") {
+      const saRow = document.createElement("div"); saRow.className = "pr-sa-row";
+      const saLab = document.createElement("span"); saLab.className = "precise-label"; saLab.textContent = "风格感知 (角色参考同时携带画风)";
+      const sw = document.createElement("label"); sw.className = "switch";
+      const cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = r.styleAware !== false;
+      const dot = document.createElement("span"); dot.className = "slider";
+      cb.addEventListener("change", () => { r.styleAware = cb.checked; savePrecise(); });
+      sw.appendChild(cb); sw.appendChild(dot);
+      saRow.appendChild(saLab); saRow.appendChild(sw);
+      card.appendChild(saRow);
+    }
+    wrap.appendChild(card);
   }
   const box = $("preciseUploadBox");
   if (box) box.classList.toggle("hidden", preciseRefs.length >= PRECISE_LIMIT);
+  const cost = $("preciseCostHint");
+  if (cost) {
+    cost.textContent = preciseRefs.length
+      ? "已选 " + preciseRefs.length + " 张参考 ≈ +" + preciseRefs.length * 5 + " Anlas/次 (与 Opus 免费额度独立)"
+      : "每张参考图每次生成 +5 Anlas, 与 Opus 免费额度独立";
+    cost.classList.toggle("hidden", !preciseRefs.length);
+  }
 }
 
 function bindPrecise() {

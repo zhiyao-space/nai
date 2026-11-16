@@ -189,10 +189,10 @@ function buildNaiPayload(p) {
       /* Precise Reference (官方 V4.5): director_reference_* 字段, secondary = 1 - fidelity */
       console.log("[precise] payload: director_reference x", refs.length, "vibes suppressed:", (p.vibes || []).length);
       params.director_reference_images = refs.map((r) => r.b64);
-      params.director_reference_descriptions = refs.map((r) => ({ caption: { base_caption: r.type || "character", char_captions: [] }, legacy_uc: false }));
+      params.director_reference_descriptions = refs.map((r) => ({ caption: { base_caption: (r.type || "character") + ((r.type || "character") !== "style" && r.styleAware === false ? " | style_aware:off" : ""), char_captions: [] }, legacy_uc: false }));
       params.director_reference_information_extracted = refs.map(() => 1);
       params.director_reference_strength_values = refs.map((r) => Number(r.strength ?? 1));
-      params.director_reference_secondary_strength_values = refs.map((r) => 1 - Number(r.fidelity ?? 1));
+      params.director_reference_secondary_strength_values = refs.map((r) => Math.round((1 - Number(r.fidelity ?? 1)) * 100) / 100);
     }
     if (vibes.length) {
       params.normalize_reference_strength_multiple = true;
