@@ -22,5 +22,8 @@
 - 空悲切中转站的 `reference_image_multiple` 只接受 `/v1/ai/encode-vibe` 编码后的 Vibe 二进制，原始图片 Base64 会报 400 INVALID_NATIVE_REQUEST；生成前须先编码，编码结果按「图片+强度+模型」本地缓存复用（编码收费约 2 Anlas/次）
 - 官方下载的 PNG 自带 Vibe 编码是官方**前端**在下载时用 stealth alpha 隐写写入的（stealth_pngcomp：gzip JSON 列优先写入 alpha 最低位），后端返回的是裸图；本站 downloadImage 用 js/pngmeta.js embedPngMetadata 复现（JSON 内 vibes[].data=编码二进制 base64 为官方复用格式）
 - 中转站/官方精准参考 (Precise Reference) 字段为 director_reference_images / descriptions / information_extracted / strength_values / secondary_strength_values（secondary = 1 - 保真度），与氛围转移互斥，仅 V4.5
+- Vibe 编码可导出为官方 .naiv4vibe 格式（JSON {prompt:"vibe encoding for NAIV4", information_extracted, data:<编码base64>}），导入同理；只有 encoded 或编码缓存命中的条目可导出，纯原图条目需先生成一次完成编码
+- Write 工具偶发把长文件内容写成本体被占位符替换的坏文件 → 写完先 cat 核实；多条 && 链式命令在托管管道里偶发只执行前几段且吞输出 → 关键步骤（patch/commit/push）单独发命令并回显结果
+- 同一 app.js 里存在多处相似代码（如 head.appendChild(del)、commentToMeta(await readPngMetadata) 各 2-3 处）→ patch 脚本断言 count==1 会失败，改用 rfind/位置限定只替换目标处
 - 对大文件做批量删功能时，用「起止标记行区间删除 + node --check 验证 + 残留关键词 grep」三步收敛，比逐个 Edit 稳
 - 沙箱重置会丢失 git remote origin，推送失败先检查 remote 是否存在再怀疑令牌
