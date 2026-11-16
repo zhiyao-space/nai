@@ -73,8 +73,8 @@
  <button class="mini-btn" id="styleOnlyBtn" type="button" style="margin: 8px 0;" title="信息提取 0.35 + 参考强度 0.7: 只学画风和构图, 不锁发色/眼色/服饰等人物具体特征">🎨 只学画风 (防人物串色)</button>
  <button class="mini-btn" id="faceVibeBtn" type="button" style="margin: 8px 0;" title="信息提取 0.6 + 参考强度 0.75: 保留脸部/人物氛围与神态类型, 但不钉死发色、瞳色、服饰、发型">👤 脸部氛围 (不锁颜色服饰)</button>
  <button class="mini-btn" id="comboVibeBtn" type="button" style="margin: 8px 0;" title="两种效果叠加: 传两张图 (第1张画风图, 第2张脸部图), 第1张只学画风 0.35, 第2张保脸部氛围 0.6; 单图则用 0.5 折中">🎭 画风+脸部氛围 (组合)</button>
- <button class="mini-btn" id="importVibePngBtn" type="button" title="从官方或本站生成的 PNG 提取内嵌 Vibe 编码加入氛围面板, 不改动提示词和其他参数">⬇ 从 PNG 导入 Vibe</button>
- <input type="file" id="vibePngInput" accept="image/png" class="hidden">
+ <button class="mini-btn" id="importVibePngBtn" type="button" title="从官方或本站生成的 PNG 提取内嵌 Vibe 编码加入氛围面板, 不改动提示词和其他参数; 也可导入 .naiv4vibe 编码文件">⬇ 导入 Vibe (PNG / 编码文件)</button>
+ <input type="file" id="vibePngInput" accept="image/png,.naiv4vibe,application/json" class="hidden">
  <div id="vibeList" class="vibe-list"></div>
         </div>
       </section>

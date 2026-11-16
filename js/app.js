@@ -1106,6 +1106,34 @@ function buildVibeSlider(vibe, key, label, onChange) {
   return wrap;
 }
 
+function vibeExportEncoding(v) {
+  /* 取出可导出的编码: 已有 encoded > 编码缓存命中 > null (需先生成一次完成编码) */
+  if (v.encoded) return v.encoded;
+  if (v.b64 && typeof getCachedVibeEncoded === "function" && getCachedVibeEncoded(v.b64, v.infoExtracted ?? 1, effectiveModel())) {
+    return getCachedVibeEncoded(v.b64, v.infoExtracted ?? 1, effectiveModel());
+  }
+  return null;
+}
+
+function exportVibeEncoding(idx) {
+  const v = vibes[idx];
+  if (!v) return;
+  const enc = vibeExportEncoding(v);
+  if (!enc) {
+    toast("这条氛围图还没有编码数据：先用当前参数生成一次完成编码, 再导出 (或直接导出带编码的 PNG)", "warn", 6000);
+    return;
+  }
+  /* 官方 Export as Encodings 格式: .naiv4vibe JSON, data 字段为编码 base64 */
+  const payload = {
+    prompt: "vibe encoding for NAIV4",
+    information_extracted: Number(v.infoExtracted ?? 1),
+    data: enc
+  };
+  const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
+  downloadBlob(blob, "vibe_" + (idx + 1) + "_" + Date.now() + ".naiv4vibe");
+  toast("已导出 .naiv4vibe 编码文件 (官方格式, 别人导入可免编码复用)", "ok", 5000);
+}
+
 function vibeBadgeState(v) {
   /* 编码状态: v.encoded 为导入/已注入的编码; 否则查编码缓存 (命中则生成时不重复扣费) */
   if (v.encoded) return { text: "已编码 · 免费复用", cls: "ok" };
@@ -1141,6 +1169,16 @@ function renderVibeList() {
       badge.className = "vibe-enc-badge " + st.cls;
       badge.textContent = st.text;
       head.appendChild(badge);
+    }
+    let exbtn = null;
+    if (familyOf() !== 3 && (v.encoded || vibeExportEncoding(v))) {
+      exbtn = document.createElement("button");
+      exbtn.className = "mini-btn";
+      exbtn.textContent = "导出编码";
+      exbtn.title = "导出为官方 .naiv4vibe 编码文件 (Export as Encodings)";
+      exbtn.style.marginRight = "6px";
+      exbtn.addEventListener("click", (e) => { e.stopPropagation(); exportVibeEncoding(idx); });
+      head.appendChild(exbtn);
     }
     head.appendChild(del);
     card.appendChild(head);
@@ -2085,7 +2123,18 @@ function bindMetaImport() {
     input.value = "";
     if (!file) return;
     try {
-      const meta = commentToMeta(await readPngMetadata(file));
+      if (/\.(naiv4vibe|json)$/i.test(file.name)) {
+      /* 官方 Export as Encodings 导出的 .naiv4vibe 编码文件 */
+      const obj = JSON.parse(await file.text());
+      const enc = obj && (obj.data || obj.encoded || obj.image);
+      if (!enc) { toast("编码文件里没有 data 字段", "err"); return; }
+      if (vibes.length >= VIBE_LIMIT) { toast(`氛围图最多 ${VIBE_LIMIT} 张`, "warn"); return; }
+      vibes.push({ id: crypto.randomUUID(), b64: "", dataUrl: "", encoded: String(enc), infoExtracted: Number(obj.information_extracted ?? obj.infoExtracted ?? 1), referenceStrength: Number(obj.strength ?? obj.referenceStrength ?? 0.6) });
+      renderVibeList(); saveVibes();
+      toast("已导入 .naiv4vibe 编码文件 (免费复用, 无需重新编码)", "ok");
+      return;
+    }
+    const meta = commentToMeta(await readPngMetadata(file));
       if (!meta) {
         toast("这张图片没有内嵌生成参数", "warn");
         return;
