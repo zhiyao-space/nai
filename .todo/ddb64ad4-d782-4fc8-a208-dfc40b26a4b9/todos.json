@@ -1,11 +1,11 @@
 [
   {
-    "content": "排查精准参考上传后缩略图不显示",
+    "content": "定位精准参考不显示图的真正原因",
     "skills": [],
     "status": "completed"
   },
   {
-    "content": "修复并验证",
+    "content": "修复粘贴路由 + 推送 main",
     "skills": [],
     "status": "completed"
   }
