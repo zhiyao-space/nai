@@ -653,7 +653,7 @@ function loadSourceFile(file) {
       initMaskCanvas();
       toast(`源图已加载 ${scaled.w}x${scaled.h}，尺寸已同步（大图已自动压缩）`, "ok");
     } catch (e) {
-      toast("图片读取失败: 手机相机拍的 HEIC/HEIF 格式浏览器解不了, 请转成 JPG/PNG 再试 (文件: " + (file.name||"") + ")", "error", 7000);
+      toast("图片读取失败", "error");
     }
   };
   reader.onerror = () => toast("图片读取失败", "error");
@@ -1258,7 +1258,7 @@ function addPreciseFiles(files) {
         console.log("[precise] added entry:", preciseRefs.length, "/", PRECISE_LIMIT, "size:", Math.round(png.length / 1024), "KB");
         savePrecise();
         renderPreciseList();
-      } catch (e) { console.error("[precise] process failed:", e); toast(e.message || "图片处理失败", "error"); }
+      } catch (e) { console.error("[precise] process failed:", e); toast((e && e.message ? e.message : "图片处理失败") + " — 若是手机相机拍的 HEIC/HEIF 格式, 请转成 JPG/PNG 再试 (文件: " + (file.name||"") + ")", "error", 7000); }
     };
     reader.readAsDataURL(file);
   }
