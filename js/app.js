@@ -1333,10 +1333,12 @@ function renderPreciseList() {
     const tune = () => { r.manualTuned = true; savePrecise(); };
     const sRow = makePrSlider("强度", -1, 1, r.strength ?? 1, (v) => { r.strength = v; }, tune);
     const fRow = makePrSlider("保真", 0, 1, r.fidelity ?? 1, (v) => { r.fidelity = v; }, tune);
+    const iRow = makePrSlider("信息提取", 0, 1, r.infoExtracted ?? 1, (v) => { r.infoExtracted = v; }, tune);
     sRow.range.addEventListener("input", () => { r.strength = +sRow.range.value; });
     fRow.range.addEventListener("input", () => { r.fidelity = +fRow.range.value; });
-    sRow.num.addEventListener("change", tune); fRow.num.addEventListener("change", tune);
-    card.appendChild(sRow.row); card.appendChild(fRow.row);
+    iRow.range.addEventListener("input", () => { r.infoExtracted = +iRow.range.value; });
+    sRow.num.addEventListener("change", tune); fRow.num.addEventListener("change", tune); iRow.num.addEventListener("change", tune);
+    card.appendChild(sRow.row); card.appendChild(fRow.row); card.appendChild(iRow.row);
 
     if ((r.type || "character") !== "style") {
       const saRow = document.createElement("div"); saRow.className = "pr-sa-row";
@@ -1353,13 +1355,6 @@ function renderPreciseList() {
   }
   const box = $("preciseUploadBox");
   if (box) box.classList.toggle("hidden", preciseRefs.length >= PRECISE_LIMIT);
-  const cost = $("preciseCostHint");
-  if (cost) {
-    cost.textContent = preciseRefs.length
-      ? "已选 " + preciseRefs.length + " 张参考 ≈ +" + preciseRefs.length * 5 + " Anlas/次 (与 Opus 免费额度独立)"
-      : "每张参考图每次生成 +5 Anlas, 与 Opus 免费额度独立";
-    cost.classList.toggle("hidden", !preciseRefs.length);
-  }
 }
 
 function bindPrecise() {
