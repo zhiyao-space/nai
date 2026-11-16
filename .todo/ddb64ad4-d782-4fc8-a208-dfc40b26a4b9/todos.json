@@ -1,16 +1,16 @@
 [
   {
-    "content": "重写 renderPreciseList 竖版卡片（滑块/开关/预设）",
+    "content": "移除 Anlas 费用提示",
     "skills": [],
     "status": "completed"
   },
   {
-    "content": "api.js styleAware 编码 + 费用提示 + 样式",
+    "content": "修复滑杆被全局样式压瘪的布局",
     "skills": [],
     "status": "completed"
   },
   {
-    "content": "验证 + 截图 + 推送 main",
+    "content": "补官方信息提取独立滑杆 + 推送 main",
     "skills": [],
     "status": "completed"
   }
