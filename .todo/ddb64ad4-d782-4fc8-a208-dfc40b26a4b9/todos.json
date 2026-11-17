@@ -1,17 +1,17 @@
 [
   {
-    "content": "移除 Anlas 费用提示",
+    "content": "精准参考导入/导出按钮 UI",
     "skills": [],
     "status": "completed"
   },
   {
-    "content": "修复滑杆被全局样式压瘪的布局",
+    "content": "导入导出逻辑（ZIP 捆绑 + PNG）",
     "skills": [],
     "status": "completed"
   },
   {
-    "content": "补官方信息提取独立滑杆 + 推送 main",
+    "content": "验证 + 推送 main",
     "skills": [],
-    "status": "completed"
+    "status": "in_progress"
   }
 ]

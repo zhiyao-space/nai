@@ -1374,7 +1374,111 @@ function bindPrecise() {
     e.preventDefault(); box.classList.remove("drag");
     addPreciseFiles(e.dataTransfer.files);
   });
+  const impBtn = $("importPreciseBtn"), expBtn = $("exportPreciseBtn"), impInput = $("preciseImportInput");
+  if (impBtn && impInput) {
+    impBtn.addEventListener("click", () => impInput.click());
+    impInput.addEventListener("change", () => {
+      if (impInput.files && impInput.files.length) importPreciseFiles(Array.from(impInput.files));
+      impInput.value = "";
+    });
+  }
+  if (expBtn) expBtn.addEventListener("click", exportPreciseBundle);
   renderPreciseList();
+}
+
+/* 精准参考导出: ZIP 捆绑 = 每张参考 PNG + precise_refs.json (参数清单); 单张 PNG 官方可直接当参考图用 */
+function dataUrlToBytes(dataUrl) {
+  const b64 = String(dataUrl).split(",")[1] || "";
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+function bytesToDataUrl(bytes, mime) {
+  let bin = "";
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return "data:" + (mime || "image/png") + ";base64," + btoa(bin);
+}
+
+async function exportPreciseBundle() {
+  if (!preciseRefs.length) { toast("还没有精准参考可导出, 先上传几张图", "warn"); return; }
+  const files = [];
+  const manifest = [];
+  for (let i = 0; i < preciseRefs.length; i++) {
+    const r = preciseRefs[i];
+    const name = "ref_" + String(i + 1).padStart(2, "0") + ".png";
+    if (r.dataUrl) {
+      try { files.push({ name, data: dataUrlToBytes(r.dataUrl) }); } catch (e) { console.warn("[precise] export skip img:", e); }
+    }
+    manifest.push({ type: r.type || "character", strength: r.strength ?? 1, fidelity: r.fidelity ?? 1, infoExtracted: r.infoExtracted ?? 1, styleAware: r.styleAware !== false, image: r.dataUrl ? name : null, data: r.dataUrl ? undefined : r.b64 });
+  }
+  files.push({ name: "precise_refs.json", data: JSON.stringify({ prompt: "precise reference bundle", version: 1, refs: manifest }, null, 2) });
+  const zip = buildZipStore(files);
+  const url = URL.createObjectURL(zip);
+  const a = document.createElement("a");
+  a.href = url; a.download = "precise_refs_" + preciseRefs.length + "_" + Date.now() + ".zip";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 3000);
+  toast("已导出 " + preciseRefs.length + " 张参考 (ZIP 捆绑, 含参数)", "ok", 4000);
+}
+
+async function importPreciseFiles(fileList) {
+  for (const f of fileList) {
+    try {
+      const lower = (f.name || "").toLowerCase();
+      if (lower.endsWith(".zip") || f.type === "application/zip") {
+        const buf = await f.arrayBuffer();
+        const entries = await extractZipEntries(buf);
+        const jsonEntry = entries.find((e) => e.name.toLowerCase().endsWith(".json"));
+        let manifest = null;
+        if (jsonEntry) { try { manifest = JSON.parse(await jsonEntry.blob.text()).refs || null; } catch (e) { console.warn("[precise] bundle json parse fail:", e); } }
+        let idx = 0;
+        for (const e of entries) {
+          if (e.name.toLowerCase().endsWith(".json")) continue;
+          if (!/\.(png|jpe?g|webp)$/i.test(e.name)) continue;
+          const dataUrl = await fileToDataUrl(e.blob);
+          await addPreciseFromDataUrl(dataUrl, manifest && manifest[idx] ? manifest[idx] : null);
+          idx++;
+        }
+        for (const m of (manifest || [])) if (m && m.data && !m.image) await addPreciseFromDataUrl("data:image/png;base64," + m.data, m);
+        toast("已从 ZIP 捆绑导入参考 (含参数)", "ok", 4000);
+      } else {
+        const dataUrl = await fileToDataUrl(f);
+        await addPreciseFromDataUrl(dataUrl, null);
+      }
+    } catch (e) {
+      console.error("[precise] import failed:", e);
+      toast("导入失败: " + ((e && e.message) || "文件处理异常"), "error", 6000);
+    }
+  }
+}
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("文件读取失败"));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function addPreciseFromDataUrl(dataUrl, meta) {
+  const scaled = await downscaleToMax(dataUrl, 1536);
+  const png = await ensurePngDataUrl(scaled.dataUrl);
+  const r = { id: uid(), b64: png.split(",")[1], dataUrl: png, type: "character", strength: 1, fidelity: 1, styleAware: true, manualTuned: false };
+  if (meta) {
+    r.type = meta.type || r.type;
+    r.strength = Number(meta.strength ?? r.strength);
+    r.fidelity = Number(meta.fidelity ?? r.fidelity);
+    r.infoExtracted = Number(meta.infoExtracted ?? 1);
+    r.styleAware = meta.styleAware !== false;
+    r.manualTuned = true;
+  }
+  if (preciseRefs.length >= PRECISE_LIMIT) { toast("精准参考最多 " + PRECISE_LIMIT + " 张, 多余的已跳过", "warn", 5000); return; }
+  preciseRefs.push(r);
+  savePrecise(); renderPreciseList();
+  console.log("[precise] imported entry:", r.type, "total:", preciseRefs.length);
 }
 
 /* ---------- 参考模式切换 (氛围转移 / 精准参考, 官方互斥) ---------- */

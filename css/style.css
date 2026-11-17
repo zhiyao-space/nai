@@ -1423,3 +1423,6 @@ body.view-history .panel-right { display: flex; }
 .pr-sa-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .pr-sa-row .precise-label { flex: 1; font-size: 11px; color: #999; }
 @media (max-width: 640px) { .precise-thumb { width: 64px; height: 64px; } .seg-btn { font-size: 11px; padding: 5px 2px; } }
+
+/* 精准参考导入导出按钮行 (与氛围面板一致的 mini-btn) */
+.precise-actions-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }

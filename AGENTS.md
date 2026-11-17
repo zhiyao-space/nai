@@ -34,4 +34,6 @@
 - Write 工具偶发把长文件内容写成本体被占位符替换的坏文件 → 写完先 cat 核实；多条 && 链式命令在托管管道里偶发只执行前几段且吞输出 → 关键步骤（patch/commit/push）单独发命令并回显结果
 - 同一 app.js 里存在多处相似代码（如 head.appendChild(del)、commentToMeta(await readPngMetadata) 各 2-3 处）→ patch 脚本断言 count==1 会失败，改用 rfind/位置限定只替换目标处
 - 对大文件做批量删功能时，用「起止标记行区间删除 + node --check 验证 + 残留关键词 grep」三步收敛，比逐个 Edit 稳
+- jsdom 冒烟测试加载本站全量 JS 需补 polyfill：dom.window 上注入 TextEncoder/TextDecoder（zip.js CRC 前置）、Node 原生 Blob（jsdom Blob 无 arrayBuffer）、indexedDB 桩（db.js 加载即 dbOpen），并用 index.html 剥掉 script/link 标签后作 DOM，否则 app.js 初始化直接抛 null.innerHTML
+- 精准参考捆绑格式：ZIP = ref_XX.png + precise_refs.json（{version:1, refs:[{type,strength,fidelity,infoExtracted,styleAware,image|data}]}），官方无精准参考文件格式，此为本站约定；导入兼容 ZIP 捆绑与普通图片
 - 沙箱重置会丢失 git remote origin，推送失败先检查 remote 是否存在再怀疑令牌
