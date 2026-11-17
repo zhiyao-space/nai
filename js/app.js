@@ -2132,7 +2132,9 @@ function collectParams() {
       b64: r.b64,
       type: r.type,
       strength: r.strength,
-      fidelity: r.fidelity
+      fidelity: r.fidelity,
+      infoExtracted: r.infoExtracted,
+      styleAware: r.styleAware
     }))
   };
 }
@@ -2238,7 +2240,9 @@ async function generate() {
       } catch (e2) {
         if (genAbort.signal.aborted) throw e2;
         console.warn("官方 NAI 通道不可用，回退 OpenAI 格式:", e2);
-        toast("中转站无官方 NAI 通道，已回退 OpenAI 格式（氛围图本次忽略）", "warn", 5000);
+        toast(p.preciseRefs && p.preciseRefs.length
+          ? "中转站官方 NAI 通道生成失败，已回退 OpenAI 格式；精准参考仅官方通道支持，本次将被忽略"
+          : "中转站无官方 NAI 通道，已回退 OpenAI 格式（氛围图本次忽略）", "warn", 6000);
         blobs = p.n > 1 ? await runBatch(settings) : await requestGeneration(settings, p, genAbort.signal);
       }
     } else if (settings.format === "openai" && p.n > 1) {
