@@ -2231,7 +2231,8 @@ async function generate() {
   } catch (err) {
     console.error("[generate] params error:", err);
     saveParams();
-    toast("生成参数存在异常数据，已自动清理，请重新点击生成 (" + (err && err.message || err) + ")", "warn", 7000);
+    const st = (err && err.stack || "").split("\n").slice(0, 3).join(" | ");
+    toast("生成参数存在异常数据，已自动清理，请重新点击生成 (" + (err && err.message || err) + ") [" + st + "]", "error", 12000);
     return;
   }
   saveSettings();
