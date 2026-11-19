@@ -1383,16 +1383,6 @@ function bindPrecise() {
     });
   }
   if (expBtn) expBtn.addEventListener("click", exportPreciseBundle);
-  const compat = $("preciseCompatToggle");
-  if (compat) {
-    compat.checked = preciseCompatOn();
-    compat.addEventListener("change", () => {
-      try { localStorage.setItem("nai_precise_compat_v1", compat.checked ? "1" : "0"); } catch (e) {}
-      toast(compat.checked
-        ? "兼容模式已开启：参考图将转成氛围编码发送 (走氛围转移通道, 通用性最好)"
-        : "兼容模式已关闭：恢复官方精准参考字段 (需中转站支持 director_reference_*)", "ok", 6000);
-    });
-  }
   renderPreciseList();
 }
 
@@ -2145,26 +2135,8 @@ function collectParams() {
       fidelity: r.fidelity,
       infoExtracted: r.infoExtracted,
       styleAware: r.styleAware
-    })),
-    vibeCompat: preciseCompatOn() && preciseRefs.some((r) => r.b64)
+    }))
   };
-  if (p.vibeCompat) {
-    /* 中转站不支持 director_reference_* 时的兼容通道:
-       把精准参考图转成氛围编码条目, 走已验证可用的 encode-vibe + reference_image_multiple */
-    p.vibes = preciseRefs.filter((r) => r.b64).map((r) => ({
-      b64: r.b64,
-      encoded: "",
-      infoExtracted: Math.min(1, Math.max(0, Number(r.infoExtracted ?? 1))),
-      referenceStrength: Math.max(0, Number(r.strength ?? 1))
-    })).concat(p.vibes);
-    p.preciseRefs = [];
-    console.log("[precise] compat mode: refs -> vibe encode x", p.vibes.length);
-  }
-  return p;
-}
-
-function preciseCompatOn() {
-  try { return localStorage.getItem("nai_precise_compat_v1") === "1"; } catch (e) { return false; }
 }
 
 function setGenerating(on) {
