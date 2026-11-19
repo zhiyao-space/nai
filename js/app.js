@@ -2617,6 +2617,7 @@ function bindCanvasActions() {
     await removeRecord(currentImage, el);
     toast("已删除该图像", "ok");
   });
+  bindGlobalErrorReport();
   $("generateBtn").addEventListener("click", generate);
   $("cancelGenBtn").addEventListener("click", () => cancelGeneration("user"));
   document.addEventListener("keydown", (e) => {
@@ -2724,6 +2725,25 @@ function bindTranslateButtons() {
   wireTranslateButton("translatePromptBtn", "promptInput");
   wireTranslateButton("translateNegativeBtn", "negativeInput");
 }
+
+/* 全局错误捕捉: 真机上任何脚本错误都可视化, 避免按钮没反应却查不到原因 */
+function bindGlobalErrorReport() {
+  window.addEventListener("error", (e) => {
+    const msg = (e && e.message) || "未知脚本错误";
+    toast("脚本错误: " + msg, "error", 9000);
+    console.error("[global]", e && e.error || e);
+  });
+  window.addEventListener("unhandledrejection", (e) => {
+    const r = e && e.reason;
+    toast("异步错误: " + ((r && (r.message || r)) || "未知"), "error", 9000);
+    console.error("[unhandled]", r);
+  });
+}
+
+/* 自救: 若按钮卡在禁用但没有进行中的请求, 回到页面时自动恢复 */
+window.addEventListener("pageshow", () => {
+  if (!generating && $("generateBtn") && $("generateBtn").disabled) setGenerating(false);
+});
 
 function init() {
   loadState();
