@@ -541,7 +541,8 @@ function buildKbqChatPayload(p) {
 }
 
 async function generateKbqChat(cfg, payload, signal) {
-  const base = cfg.base.replace(/\/+$/, "");
+  /* 用户 Base URL 可能带 /v1 结尾 (如空悲切线路), 统一剥掉再拼完整路径, 避免 /v1/v1 */
+  const base = cfg.base.replace(/\/+$/, "").replace(/\/v1$/, "");
   let res;
   try {
     res = await fetch(base + "/v1/chat/completions", {
