@@ -2100,7 +2100,7 @@ function collectParams() {
   const model = effectiveModel();
   const seed = params.seed === "" || params.seed == null ? randomSeed() : params.seed;
   const action = currentAction();
-  return {
+  const p = {
     prompt: params.prompt,
     negative: params.negative,
     model,
