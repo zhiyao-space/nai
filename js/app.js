@@ -1374,14 +1374,7 @@ function bindPrecise() {
     e.preventDefault(); box.classList.remove("drag");
     addPreciseFiles(e.dataTransfer.files);
   });
-  const impBtn = $("importPreciseBtn"), expBtn = $("exportPreciseBtn"), impInput = $("preciseImportInput");
-  if (impBtn && impInput) {
-    impBtn.addEventListener("click", () => impInput.click());
-    impInput.addEventListener("change", () => {
-      if (impInput.files && impInput.files.length) importPreciseFiles(Array.from(impInput.files));
-      impInput.value = "";
-    });
-  }
+  const expBtn = $("exportPreciseBtn");
   if (expBtn) expBtn.addEventListener("click", exportPreciseBundle);
   renderPreciseList();
 }
