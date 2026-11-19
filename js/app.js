@@ -253,7 +253,7 @@ function bindPrompt() {
   $("clearPromptBtn").addEventListener("click", () => {
     $("promptInput").value = "";
     params.prompt = "";
-    updateCounts();
+    updatePromptCount();
     saveParams();
     toast("已清空画面描述", "ok");
   });
