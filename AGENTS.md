@@ -36,4 +36,6 @@
 - 对大文件做批量删功能时，用「起止标记行区间删除 + node --check 验证 + 残留关键词 grep」三步收敛，比逐个 Edit 稳
 - jsdom 冒烟测试加载本站全量 JS 需补 polyfill：dom.window 上注入 TextEncoder/TextDecoder（zip.js CRC 前置）、Node 原生 Blob（jsdom Blob 无 arrayBuffer）、indexedDB 桩（db.js 加载即 dbOpen），并用 index.html 剥掉 script/link 标签后作 DOM，否则 app.js 初始化直接抛 null.innerHTML
 - 精准参考捆绑格式：ZIP = ref_XX.png + precise_refs.json（{version:1, refs:[{type,strength,fidelity,infoExtracted,styleAware,image|data}]}），官方无精准参考文件格式，此为本站约定；导入兼容 ZIP 捆绑与普通图片
+- 空悲切中转站官方文档声明原生格式支持精准参考（仅 V4.5、≤4 张、与氛围互斥），但实际请求 director_reference_* 仍 500 → 已加「编码兼容模式」开关（localStorage nai_precise_compat_v1）：开启后 collectParams 把 preciseRefs 转成 vibes 条目（b64+空 encoded）走 encode-vibe + reference_image_multiple 通道，类型/保真/风格感知参数不生效
+- collectParams 是 `return {...}` 直接返回字面量，patch 时若要在函数尾部处理返回值必须先把 `return {` 改成 `const p = {`，否则运行时 ReferenceError（node --check 查不出来）
 - 沙箱重置会丢失 git remote origin，推送失败先检查 remote 是否存在再怀疑令牌
