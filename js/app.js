@@ -2148,6 +2148,7 @@ function collectParams() {
       styleAware: r.styleAware
     }))
   };
+  return p;
 }
 
 function setGenerating(on) {
