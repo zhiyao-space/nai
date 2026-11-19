@@ -107,6 +107,21 @@ function loadCachedModels() {
   } catch (e) {}
 }
 
+/* 角色条目规范化: 历史版本可能存入 null/空条目或缺少 prompt/negative 字段的脏数据,
+   不清洗会让 collectParams / generate 校验在读 .prompt 时崩溃 */
+function normalizeCharacters(list) {
+  if (!Array.isArray(list)) return [];
+  return list
+    .filter((c) => c && typeof c === "object")
+    .map((c) => ({
+      id: typeof c.id === "string" && c.id ? c.id : crypto.randomUUID(),
+      prompt: typeof c.prompt === "string" ? c.prompt : "",
+      negative: typeof c.negative === "string" ? c.negative : "",
+      x: Number.isFinite(+c.x) ? +c.x : 0.5,
+      y: Number.isFinite(+c.y) ? +c.y : 0.5
+    }));
+}
+
 function loadState() {
   try {
     const s = JSON.parse(localStorage.getItem(LS_SETTINGS) || "null");
@@ -114,18 +129,7 @@ function loadState() {
     const p = JSON.parse(localStorage.getItem(LS_PARAMS) || "null");
     if (p) {
       params = { ...DEFAULT_PARAMS, ...p };
-      /* 历史版本可能存入 null/空条目或缺少 prompt/negative 字段的脏数据,
-         不清洗会让 collectParams / generate 校验在读 .prompt 时崩溃 */
-      if (!Array.isArray(params.characters)) params.characters = [];
-      params.characters = params.characters
-        .filter((c) => c && typeof c === "object")
-        .map((c) => ({
-          id: typeof c.id === "string" && c.id ? c.id : crypto.randomUUID(),
-          prompt: typeof c.prompt === "string" ? c.prompt : "",
-          negative: typeof c.negative === "string" ? c.negative : "",
-          x: Number.isFinite(+c.x) ? +c.x : 0.5,
-          y: Number.isFinite(+c.y) ? +c.y : 0.5
-        }));
+      params.characters = normalizeCharacters(params.characters);
     }
     const v = JSON.parse(localStorage.getItem(LS_VIBES) || "null");
     if (Array.isArray(v)) vibes = v.filter((x) => x && x.b64).slice(0, VIBE_LIMIT);
@@ -2214,12 +2218,22 @@ async function generate() {
       toast("已自动切换为 V4.5 Inpainting 重绘模型", "warn");
     }
   }
-  const p = collectParams();
-  if (!p.prompt.trim() && !p.characters.some((c) => (c.prompt || "").trim())) {
-    toast("请先输入提示词 (Prompt) 或角色提示词", "warn");
+  /* 兜底: 运行期间任何途径写入的脏角色条目在这里最后清洗一次 */
+  params.characters = normalizeCharacters(params.characters);
+  let p;
+  try {
+    p = collectParams();
+    if (!p.prompt.trim() && !p.characters.some((c) => (c.prompt || "").trim())) {
+      toast("请先输入提示词 (Prompt) 或角色提示词", "warn");
+      return;
+    }
+    applyVibePreset(p);
+  } catch (err) {
+    console.error("[generate] params error:", err);
+    saveParams();
+    toast("生成参数存在异常数据，已自动清理，请重新点击生成 (" + (err && err.message || err) + ")", "warn", 7000);
     return;
   }
-  applyVibePreset(p);
   saveSettings();
   setGenerating(true);
   if (isMobileView()) switchView("canvas");
