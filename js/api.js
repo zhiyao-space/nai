@@ -479,6 +479,91 @@ async function ensureVibesEncoded(cfg, params, signal) {
   }
 }
 
+/* ---------- 空悲切 Chat 协议 (/v1/chat/completions + JSON 消息体) ----------
+   逆向自 MochiNai 官方前端: 精准参考=character_references, 氛围=controlnet.images,
+   响应为 Markdown data URI 图片 */
+function kbqDataUri(b64, mime) {
+  return "data:" + (mime || "image/png") + ";base64," + b64;
+}
+
+function buildKbqChatPayload(p) {
+  const s = {
+    prompt: composePrompt(p.prompt, modelFamily(p.model), p.qualityOn),
+    size: [p.width, p.height],
+    steps: p.steps,
+    scale: p.scale,
+    sampler: p.sampler,
+    image_format: "png",
+    noise_schedule: p.noiseSchedule
+  };
+  if (p.negative.trim()) s.negative_prompt = p.negative.trim();
+  else if (p.ucpOn) s.negative_prompt = getUcPresetString(modelFamily(p.model), p.ucLevel || "heavy");
+  if (Number.isFinite(p.seed) && p.seed >= 0) s.seed = p.seed;
+  if (p.cfgRescale > 0) s.cfg_rescale = p.cfgRescale;
+  if (p.variety > 0) s.variety_boost = true;
+
+  const action = p.action || "generate";
+  if (action === "img2img") {
+    s.i2i = { image: kbqDataUri(p.imageB64), strength: p.strength, noise: p.noise };
+  } else if (action === "inpaint") {
+    s.inpaint = { image: kbqDataUri(p.imageB64), mask: kbqDataUri(p.maskB64), strength: p.strength };
+  }
+
+  if (p.characters && p.characters.length && (p.useCoords || p.characters.some((c) => c.prompt))) {
+    s.characters = p.characters.map((c) => {
+      const o = { prompt: c.prompt || "" };
+      if (c.uc || c.negativePrompt) o.negative_prompt = c.uc || c.negativePrompt;
+      if (p.useCoords && c.center) o.position = c.center;
+      return o;
+    });
+    s.use_coords = !!p.useCoords;
+  }
+
+  if (p.vibes && p.vibes.length) {
+    const imgs = p.vibes.filter((v) => v.b64 || v.encoded).map((v) => {
+      if (!v.b64) throw new Error("Chat 协议的氛围图需要原图: 请在氛围面板重新上传该参考图 (纯编码条目仅官方 NAI 格式支持)");
+      return { image: kbqDataUri(v.b64), info_extracted: Math.min(1, Math.max(0.01, Number(v.infoExtracted ?? 1))), strength: Math.min(1, Math.max(0.01, Number(v.referenceStrength ?? 0.6))) };
+    });
+    if (imgs.length) s.controlnet = { images: imgs };
+  }
+
+  if (p.preciseRefs && p.preciseRefs.length) {
+    s.character_references = p.preciseRefs.map((r) => ({
+      image: kbqDataUri(r.b64),
+      type: r.type === "style" ? "style" : "character",
+      fidelity: Math.min(1, Math.max(0, Number(r.fidelity ?? 1))),
+      strength: Math.min(1, Math.max(0, Number(r.strength ?? 1)))
+    }));
+    console.log("[kbq] character_references x", s.character_references.length);
+  }
+  console.log("[kbq] chat payload:", Object.keys(s).join(","));
+  return s;
+}
+
+async function generateKbqChat(cfg, payload, signal) {
+  const base = cfg.base.replace(/\/+$/, "");
+  let res;
+  try {
+    res = await fetch(base + "/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${cfg.key}` },
+      body: JSON.stringify({ model: cfg.model, messages: [{ role: "user", content: JSON.stringify(payload) }], stream: false }),
+      signal
+    });
+  } catch (e) {
+    throw friendlyNetworkError(e);
+  }
+  if (!res.ok) await readErrorResponse(res);
+  const json = await res.json().catch(() => null);
+  const content = json && json.choices && json.choices[0] && json.choices[0].message ? String(json.choices[0].message.content || "") : "";
+  const m = content.match(/!\[[^\]]*\]\((data:image\/[^;)]+;base64,([^)]+)\))/) || content.match(/(data:image\/[a-z]+;base64,([A-Za-z0-9+/=]{100,}))/);
+  if (!m) throw new Error("Chat 响应中没有找到图片 (data URI)，原始回复前 200 字: " + content.slice(0, 200));
+  const bin = atob(m[2]);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return [new Blob([bytes], { type: "image/png" })];
+}
+
 async function requestGeneration(cfg, params, signal) {
   /* 参考图通道: 中转站不接受原始图片 Base64, 需先 encode-vibe 编码;
      OpenAI Images 端点不支持氛围字段, 带氛围图时改走原生端点 */
@@ -488,12 +573,15 @@ async function requestGeneration(cfg, params, signal) {
     if ((params.preciseRefs || []).some((r) => r && r.b64) && !(params.vibes || []).some((v) => v && v.b64)) {
       /* 仅精准参考: 跳过氛围编码, 直接走原生端点 */
       console.log("[precise] only director refs, skip vibe encode");
+      if (cfg.format === "kbq") return generateKbqChat(cfg, buildKbqChatPayload(params), signal);
       if (cfg.format === "openai") return generateNai(cfg, buildNaiPayload(params), signal);
     } else {
       await ensureVibesEncoded(cfg, params, signal);
+      if (cfg.format === "kbq") return generateKbqChat(cfg, buildKbqChatPayload(params), signal);
       if (cfg.format === "openai") return generateNai(cfg, buildNaiPayload(params), signal);
     }
   }
+  if (cfg.format === "kbq") return generateKbqChat(cfg, buildKbqChatPayload(params), signal);
   const payload = cfg.format === "openai" ? buildOpenAiPayload(params) : buildNaiPayload(params);
   return cfg.format === "openai" ? generateOpenai(cfg, payload, signal) : generateNai(cfg, payload, signal);
 }

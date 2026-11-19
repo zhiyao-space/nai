@@ -432,10 +432,11 @@
       </div>
       <div class="field">
         <label>接口格式 <button class="hint-btn" title="这是什么？">?</button></label>
-        <p class="hint-text hidden">看你用的中转站支持哪种：转发 NovelAI 官方接口的选「NovelAI 官方格式」；给 /v1/images/generations 这类通用接口的选「OpenAI 兼容格式」。空悲切等提供 NovelAI 原生格式调用的中转站，直接用默认的「NovelAI 官方格式」即可，无需改动。</p>
+        <p class="hint-text hidden">看你用的中转站支持哪种：转发 NovelAI 官方接口的选「NovelAI 官方格式」；给 /v1/images/generations 这类通用接口的选「OpenAI 兼容格式」。空悲切等提供 NovelAI 原生格式调用的中转站，直接用默认的「NovelAI 官方格式」；若精准参考 500，可换「空悲切 Chat 协议」(逆向自其官方 MochiNai 工具，精准参考/氛围转移均支持)。</p>
         <select id="apiFormat">
           <option value="nai">NovelAI 官方格式 (/ai/generate-image)</option>
           <option value="openai">OpenAI 兼容格式 (/v1/images/generations)</option>
+          <option value="kbq">空悲切 Chat 协议 (/v1/chat/completions, 支持精准参考)</option>
         </select>
       </div>
       <div class="field">
@@ -473,8 +474,8 @@
 
 <script src="js/zip.js?v=20261116a"></script>
 <script src="js/db.js?v=20261110g"></script>
-<script src="js/api.js?v=20261116e"></script>
+<script src="js/api.js?v=20261119c"></script>
 <script src="js/pngmeta.js?v=20261115c"></script>
-<script src="js/app.js?v=20261119b"></script>
+<script src="js/app.js?v=20261119c"></script>
 </body>
 </html>

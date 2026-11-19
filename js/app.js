@@ -2231,7 +2231,9 @@ async function generate() {
   };
   try {
     let blobs = [];
-    if (settings.format === "openai" && p.vibes.length) {
+    if (settings.format === "kbq") {
+      blobs = p.n > 1 ? await runBatch(settings) : await requestGeneration(settings, p, genAbort.signal);
+    } else if (settings.format === "openai" && p.vibes.length) {
       // OpenAI 协议没有氛围字段: 先试官方 NAI 通道让氛围图生效, 不可用再回退
       toast("检测到氛围图：正在尝试中转站的官方 NAI 通道…", "info", 4000);
       try {
@@ -2245,7 +2247,7 @@ async function generate() {
           : "中转站无官方 NAI 通道，已回退 OpenAI 格式（氛围图本次忽略）", "warn", 6000);
         blobs = p.n > 1 ? await runBatch(settings) : await requestGeneration(settings, p, genAbort.signal);
       }
-    } else if (settings.format === "openai" && p.n > 1) {
+    } else if ((settings.format === "openai" || settings.format === "kbq") && p.n > 1) {
       blobs = await runBatch(settings);
     } else {
       blobs = await requestGeneration(settings, p, genAbort.signal);
