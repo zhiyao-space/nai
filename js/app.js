@@ -112,7 +112,12 @@ function loadState() {
     const s = JSON.parse(localStorage.getItem(LS_SETTINGS) || "null");
     if (s) settings = { ...DEFAULT_SETTINGS, ...s };
     const p = JSON.parse(localStorage.getItem(LS_PARAMS) || "null");
-    if (p) params = { ...DEFAULT_PARAMS, ...p };
+    if (p) {
+      params = { ...DEFAULT_PARAMS, ...p };
+      /* 历史版本可能存入 null/空条目, 不清洗会让 collectParams 读 c.prompt 时崩溃 */
+      if (!Array.isArray(params.characters)) params.characters = [];
+      params.characters = params.characters.filter((c) => c && typeof c === "object");
+    }
     const v = JSON.parse(localStorage.getItem(LS_VIBES) || "null");
     if (Array.isArray(v)) vibes = v.filter((x) => x && x.b64).slice(0, VIBE_LIMIT);
     const pr = JSON.parse(localStorage.getItem(LS_PRECISE) || "null");
@@ -2107,7 +2112,7 @@ function collectParams() {
     noise: params.noise,
     imageB64: sourceImage ? sourceImage.b64 : null,
     maskB64: action === "inpaint" ? exportMaskB64() : null,
-    characters: params.characters.map((c) => ({
+    characters: params.characters.filter((c) => c && typeof c === "object").map((c) => ({
       prompt: c.prompt,
       negative: c.negative,
       x: c.x ?? 0.5,
