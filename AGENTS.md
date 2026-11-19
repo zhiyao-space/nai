@@ -39,3 +39,5 @@
 - 空悲切精准参考真实可用协议（逆向自其官方 MochiNai 前端 bundle）：走 /v1/chat/completions，消息体为 JSON 字符串，精准参考字段是 `character_references`（非官方 director_*）：[{image: dataURI, type:'character'|'style', fidelity, strength}]；氛围是 `controlnet.images`：[{image: dataURI, info_extracted, strength}]；响应为 Markdown data URI 图片。本站已实现为第三种接口格式 format:"kbq"。其原生接口的 director_reference_* 字段实测 500（自家 MochiNai 可用、第三方转发有 bug）
 - collectParams 是 `return {...}` 直接返回字面量，patch 时若要在函数尾部处理返回值必须先把 `return {` 改成 `const p = {`，否则运行时 ReferenceError（node --check 查不出来）
 - 沙箱重置会丢失 git remote origin，推送失败先检查 remote 是否存在再怀疑令牌
+- 排查"线上没生效"先确认改动是否已 commit：工作区未提交的修改 git diff origin/main..HEAD 看不到，只有 ?? 未跟踪或 M 状态能暴露；推送通道可能间歇 TLS -110 / Authentication failed 抖动，API /user 200 不代表 git push 会成功，原样重试常可成功
+- 部署页面"按钮点了没反应"类问题：加全局 window error/unhandledrejection toast + pageshow 恢复卡死的 disabled 按钮，让用户看到真实报错文本再定位
