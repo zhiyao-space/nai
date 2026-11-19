@@ -41,3 +41,5 @@
 - 沙箱重置会丢失 git remote origin，推送失败先检查 remote 是否存在再怀疑令牌
 - 排查"线上没生效"先确认改动是否已 commit：工作区未提交的修改 git diff origin/main..HEAD 看不到，只有 ?? 未跟踪或 M 状态能暴露；推送通道可能间歇 TLS -110 / Authentication failed 抖动，API /user 200 不代表 git push 会成功，原样重试常可成功
 - 部署页面"按钮点了没反应"类问题：加全局 window error/unhandledrejection toast + pageshow 恢复卡死的 disabled 按钮，让用户看到真实报错文本再定位
+- loadState() 从 localStorage 恢复 params.characters 不清洗会让 collectParams 读 c.prompt 崩溃（且该调用在 generate() 的 try 之前 → 表现为每个通道都点不了 + 全局「异步错误」toast）；恢复和 collectParams 两处都加 filter(c=>c&&typeof c==='object') 防护
+- jsdom w.eval 加载本站全量 JS 时顶层 `window.addEventListener("pageshow",...)` 报 window is not defined（该 eval 上下文无 window/addEventListener 自由绑定），测试时字符串替换为裸 addEventListener 也一样失败；全量 DOM 冒烟成本高，改用 node 单测修复逻辑（纯函数级过滤/映射）验证
