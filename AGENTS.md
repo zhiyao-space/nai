@@ -36,6 +36,6 @@
 - 对大文件做批量删功能时，用「起止标记行区间删除 + node --check 验证 + 残留关键词 grep」三步收敛，比逐个 Edit 稳
 - jsdom 冒烟测试加载本站全量 JS 需补 polyfill：dom.window 上注入 TextEncoder/TextDecoder（zip.js CRC 前置）、Node 原生 Blob（jsdom Blob 无 arrayBuffer）、indexedDB 桩（db.js 加载即 dbOpen），并用 index.html 剥掉 script/link 标签后作 DOM，否则 app.js 初始化直接抛 null.innerHTML
 - 精准参考捆绑格式：ZIP = ref_XX.png + precise_refs.json（{version:1, refs:[{type,strength,fidelity,infoExtracted,styleAware,image|data}]}），官方无精准参考文件格式，此为本站约定；导入兼容 ZIP 捆绑与普通图片
-- 空悲切中转站文档声称原生格式支持精准参考（仅 V4.5、≤4 张、与氛围互斥），其自家 MochiNai 网页工具实测可用，但第三方客户端走原生接口 director_reference_* 仍 500 → 属其接口转发 bug，已做「复制请求 JSON」调试入口供用户反馈；曾实现的「编码兼容模式」（refs 转 vibes 走氛围通道）经验证与氛围转移无本质区别，已按用户要求移除
+- 空悲切精准参考真实可用协议（逆向自其官方 MochiNai 前端 bundle）：走 /v1/chat/completions，消息体为 JSON 字符串，精准参考字段是 `character_references`（非官方 director_*）：[{image: dataURI, type:'character'|'style', fidelity, strength}]；氛围是 `controlnet.images`：[{image: dataURI, info_extracted, strength}]；响应为 Markdown data URI 图片。本站已实现为第三种接口格式 format:"kbq"。其原生接口的 director_reference_* 字段实测 500（自家 MochiNai 可用、第三方转发有 bug）
 - collectParams 是 `return {...}` 直接返回字面量，patch 时若要在函数尾部处理返回值必须先把 `return {` 改成 `const p = {`，否则运行时 ReferenceError（node --check 查不出来）
 - 沙箱重置会丢失 git remote origin，推送失败先检查 remote 是否存在再怀疑令牌
