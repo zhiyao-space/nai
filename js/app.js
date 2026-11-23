@@ -2285,6 +2285,12 @@ async function generate() {
       prependHistoryItem(rec);
       showImage(rec);
     }
+    /* 生成成功后自动滚动到新 Seed, 避免忘记改 Seed 时重复生成同一张图 */
+    if (!getActiveVibePreset()) {
+      params.seed = randomSeed();
+      $("seedInput").value = params.seed;
+      saveParams();
+    }
     toast(`生成完成，共 ${blobs.length} 张图像`, "ok");
   } catch (e) {
     if (genAbort && genAbort.signal.aborted) {
