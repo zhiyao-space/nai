@@ -1,0 +1,14 @@
+{
+  "format": 2,
+  "miniprogramRoot": "./",
+  "compileType": "mini",
+  "compileOptions": {
+    "component2": true,
+    "transpile": {
+      "script": {}
+    }
+  },
+  "developOptions": {
+    "skipTranspile": true
+  }
+}

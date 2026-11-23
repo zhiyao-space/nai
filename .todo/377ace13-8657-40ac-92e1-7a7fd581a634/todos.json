@@ -1,0 +1,20 @@
+[
+  {
+    "id": "1",
+    "status": "in_progress",
+    "skills": [],
+    "content": "jsdom 复现 kbq 格式崩溃"
+  },
+  {
+    "id": "2",
+    "status": "pending",
+    "skills": [],
+    "content": "加固 kbq 链路并修复"
+  },
+  {
+    "id": "3",
+    "status": "pending",
+    "skills": [],
+    "content": "构建验证、推送上线"
+  }
+]

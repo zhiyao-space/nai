@@ -37,7 +37,7 @@
 - jsdom 冒烟测试加载本站全量 JS 需补 polyfill：dom.window 上注入 TextEncoder/TextDecoder（zip.js CRC 前置）、Node 原生 Blob（jsdom Blob 无 arrayBuffer）、indexedDB 桩（db.js 加载即 dbOpen），并用 index.html 剥掉 script/link 标签后作 DOM，否则 app.js 初始化直接抛 null.innerHTML
 - 精准参考捆绑格式：ZIP = ref_XX.png + precise_refs.json（{version:1, refs:[{type,strength,fidelity,infoExtracted,styleAware,image|data}]}），官方无精准参考文件格式，此为本站约定；导入兼容 ZIP 捆绑与普通图片
 - 空悲切精准参考真实可用协议（逆向自其官方 MochiNai 前端 bundle）：走 /v1/chat/completions，消息体为 JSON 字符串，精准参考字段是 `character_references`（非官方 director_*）：[{image: dataURI, type:'character'|'style', fidelity, strength}]；氛围是 `controlnet.images`：[{image: dataURI, info_extracted, strength}]；响应为 Markdown data URI 图片。本站已实现为第三种接口格式 format:"kbq"。其原生接口的 director_reference_* 字段实测 500（自家 MochiNai 可用、第三方转发有 bug）
-- collectParams 是 `return {...}` 直接返回字面量，patch 时若要在函数尾部处理返回值必须先把 `return {` 改成 `const p = {`，否则运行时 ReferenceError（node --check 查不出来）
+- collectParams 是 `return {...}` 直接返回字面量，patch 时若要在函数尾部处理返回值必须先把 `return {` 改成 `const p = {` 并记得补 `return p;`——曾因重构时漏写 return 导致调用方拿到 undefined（reading 'prompt' 崩溃）；node --check 查不出这类逻辑错误，需 jsdom 复现验证
 - 沙箱重置会丢失 git remote origin，推送失败先检查 remote 是否存在再怀疑令牌
 - 排查"线上没生效"先确认改动是否已 commit：工作区未提交的修改 git diff origin/main..HEAD 看不到，只有 ?? 未跟踪或 M 状态能暴露；推送通道可能间歇 TLS -110 / Authentication failed 抖动，API /user 200 不代表 git push 会成功，原样重试常可成功
 - 部署页面"按钮点了没反应"类问题：加全局 window error/unhandledrejection toast + pageshow 恢复卡死的 disabled 按钮，让用户看到真实报错文本再定位
