@@ -1131,20 +1131,36 @@ function buildVibeSlider(vibe, key, label, onChange) {
 }
 
 function vibeExportEncoding(v) {
-  /* 取出可导出的编码: 已有 encoded > 编码缓存命中 > null (需先生成一次完成编码) */
+  /* 取出可导出的编码: 已有 encoded > 编码缓存命中 > null */
   if (v.encoded) return v.encoded;
-  if (v.b64 && typeof getCachedVibeEncoded === "function" && getCachedVibeEncoded(v.b64, v.infoExtracted ?? 1, effectiveModel())) {
-    return getCachedVibeEncoded(v.b64, v.infoExtracted ?? 1, effectiveModel());
+  if (v.b64 && typeof getCachedVibeEncoded === "function") {
+    const c = getCachedVibeEncoded(v.b64, v.infoExtracted ?? 1, effectiveModel());
+    if (c) return c;
   }
   return null;
 }
+async function ensureVibeExportEncoding(v) {
+  /* 导出兜底: 编码缓存可能因 localStorage 超配额丢失, 有原图时现场重新编码一次再导出 */
+  let enc = vibeExportEncoding(v);
+  if (enc || !v.b64 || !settings.base.trim()) return enc;
+  toast("编码缓存丢失, 正在重新编码 (约 2 Anlas)…", "info", 4000);
+  try {
+    enc = await encodeVibe(settings, v.b64, v.infoExtracted ?? 1, effectiveModel(), null);
+    v.encoded = enc;
+    saveVibes();
+  } catch (e) {
+    console.warn("[vibe] export re-encode fail:", e);
+    enc = null;
+  }
+  return enc;
+}
 
-function exportVibeEncoding(idx) {
+async function exportVibeEncoding(idx) {
   const v = vibes[idx];
   if (!v) return;
-  const enc = vibeExportEncoding(v);
+  const enc = await ensureVibeExportEncoding(v);
   if (!enc) {
-    toast("这条氛围图还没有编码数据：先用当前参数生成一次完成编码, 再导出 (或直接导出带编码的 PNG)", "warn", 6000);
+    toast(v.b64 ? "编码失败: 请检查中转站地址/密钥后重试" : "这条氛围图没有原图, 无法现场编码", "warn", 6000);
     return;
   }
   /* 官方 Export as Encodings 格式: .naiv4vibe JSON, data 字段为编码 base64 */
@@ -1158,21 +1174,22 @@ function exportVibeEncoding(idx) {
   toast("已导出 .naiv4vibe 编码文件 (官方格式, 别人导入可免编码复用)", "ok", 5000);
 }
 
-function exportVibeBundle() {
+async function exportVibeBundle() {
   /* 官方 Export as Encodings 同款: 多张 vibe 打包成一个 ZIP, 每张一个独立 .naiv4vibe */
   const files = [];
-  vibes.forEach((v, idx) => {
-    const enc = vibeExportEncoding(v);
-    if (!enc) return;
+  for (let idx = 0; idx < vibes.length; idx++) {
+    const v = vibes[idx];
+    const enc = await ensureVibeExportEncoding(v);
+    if (!enc) continue;
     const payload = {
       prompt: "vibe encoding for NAIV4",
       information_extracted: Number(v.infoExtracted ?? 1),
       data: enc
     };
     files.push({ name: "vibe_" + String(idx + 1).padStart(2, "0") + ".naiv4vibe", data: JSON.stringify(payload) });
-  });
+  }
   if (!files.length) {
-    toast("没有可导出的编码：请先用当前参数生成一次完成编码, 或导入带编码的 PNG / 编码文件", "warn", 6000);
+    toast("没有可导出的编码: 请检查中转站配置, 或这张氛围图缺少原图", "warn", 6000);
     return;
   }
   const blob = buildZipStore(files);
