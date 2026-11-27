@@ -257,6 +257,50 @@ function buildNaiPayload(p) {
   };
 }
 
+/* OpenAI 官方 Images API 各模型支持的固定尺寸; gpt-image 系列不接受 steps/guidance_scale/seed 等扩展字段 */
+const OPENAI_OFFICIAL_SIZES = {
+  "gpt-image": ["1024x1024", "1536x1024", "1024x1536"],
+  "dall-e-3": ["1024x1024", "1792x1024", "1024x1792"],
+  "dall-e-2": ["256x256", "512x512", "1024x1024"]
+};
+
+function nearestOpenAiSize(size, allowed) {
+  if (allowed.includes(size)) return size;
+  const [w, h] = String(size).split("x").map(Number);
+  if (!w || !h) return allowed[0];
+  const ratio = Math.log(w / h);
+  let best = allowed[0], bestDiff = Infinity;
+  for (const s of allowed) {
+    const [aw, ah] = s.split("x").map(Number);
+    const d = Math.abs(Math.log(aw / ah) - ratio) + Math.abs(Math.log((aw * ah) / (w * h))) * 0.3;
+    if (d < bestDiff) { bestDiff = d; best = s; }
+  }
+  return best;
+}
+
+/* 中转站通用模型 (flux/sd 等) 放行扩展字段; 官方 GPT 系列模型按官方参数收敛, 避免整单被拒 */
+function adaptOpenAiBody(body) {
+  const model = String(body.model || "");
+  let family = null;
+  for (const k of Object.keys(OPENAI_OFFICIAL_SIZES)) {
+    if (model.includes(k)) { family = k; break; }
+  }
+  if (!family) return body;
+  delete body.steps;
+  delete body.guidance_scale;
+  delete body.seed;
+  delete body.negative_prompt;
+  body.size = nearestOpenAiSize(body.size, OPENAI_OFFICIAL_SIZES[family]);
+  if (family === "gpt-image") {
+    delete body.response_format; /* gpt-image 固定返回 b64, 传该参数官方会报错 */
+    body.quality = body.quality || "high";
+  } else {
+    body.response_format = "b64_json";
+    if (family === "dall-e-3") body.quality = body.quality === "low" ? "standard" : "hd";
+  }
+  return body;
+}
+
 function buildOpenAiPayload(p) {
   const finalPrompt = composePrompt(p.prompt, 0, p.qualityOn);
   const chars = (p.characters || []).filter((c) => c.prompt && c.prompt.trim());
@@ -289,7 +333,7 @@ function buildOpenAiPayload(p) {
     if (action === "img2img") body.noise = p.noise;
     if (action === "inpaint" && p.maskB64) body.mask = p.maskB64;
   }
-  return body;
+  return adaptOpenAiBody(body);
 }
 
 async function readErrorResponse(res) {
