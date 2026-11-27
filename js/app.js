@@ -49,7 +49,8 @@ const DEFAULT_SETTINGS = {
   translateModel: "",
   gptModel: "gpt-image-1",
   gptSize: "1024x1536",
-  gptQuality: "high"
+  gptQuality: "high",
+  gptNegative: ""
 };
 
 let settings = { ...DEFAULT_SETTINGS };
@@ -2182,6 +2183,7 @@ function collectParams() {
     const [gw, gh] = String(settings.gptSize || "1024x1024").split("x").map(Number);
     if (gw && gh) { p.width = gw; p.height = gh; }
     p.quality = settings.gptQuality || "high";
+    p.negative = ($("gptNegativeInput").value || "").trim();
   }
   return p;
 }
@@ -2540,6 +2542,8 @@ function bindGptPanel() {
   }
   $("gptQualitySelect").value = settings.gptQuality || "high";
   $("gptQualitySelect").addEventListener("change", () => { settings.gptQuality = $("gptQualitySelect").value; saveSettings(); });
+  $("gptNegativeInput").value = settings.gptNegative || "";
+  $("gptNegativeInput").addEventListener("input", () => { settings.gptNegative = $("gptNegativeInput").value; saveSettings(); });
 }
 
 /* ---------- settings modal ---------- */
