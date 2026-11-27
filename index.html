@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NovelAI 图像生成</title>
-<link rel="stylesheet" href="css/style.css?v=20261116a">
+<link rel="stylesheet" href="css/style.css?v=20261127b">
 </head>
 <body>
 
@@ -26,6 +26,11 @@
 
   <aside class="panel-left">
     <div class="panel-scroll">
+
+      <div class="fmt-tabs" id="fmtTabs">
+        <button type="button" class="fmt-tab" data-fmt="nai">🧩 NAI 模式</button>
+        <button type="button" class="fmt-tab" data-fmt="gpt">💬 GPT 模式</button>
+      </div>
 
       <section class="card">
         <div class="card-title">画面描述 (提示词) <button class="hint-btn" title="这是什么？">?</button> <span class="char-count" id="promptCount">0</span> <button class="mini-btn" id="translatePromptBtn" title="把中文提示词翻译成英文标签（需在设置里选翻译模型）">中→英</button> <button class="mini-btn" id="importMetaBtn" title="选择一张 NovelAI 或本站生成的 PNG，自动读取内嵌参数并复用">导入参数</button> <button class="mini-btn" id="clearPromptBtn">清空</button></div>
@@ -51,20 +56,20 @@
         <p class="hint-text hidden">自动画质词：开启后自动附加「very aesthetic, masterpiece」等关键词，整体更精致。自动排除瑕疵：生成时自动排除模糊、低质量、水印等常见毛病，不用手写。</p>
       </section>
 
-      <section class="card">
+      <section class="card nai-only">
         <div class="card-title">排除内容 (负向提示词) <button class="hint-btn" title="这是什么？">?</button> <span class="char-count" id="negativeCount">0</span> <button class="mini-btn" id="translateNegativeBtn" title="把中文排除内容翻译成英文">中→英</button> <button class="mini-btn" id="clearNegativeBtn">清空</button></div>
         <p class="hint-text hidden">写不想出现在画面里的东西，例如：两个人、文字、水印、模糊。开启「自动排除瑕疵」时留空即可，会自动填入常用排除项。</p>
         <textarea id="negativeInput" rows="3" spellcheck="false" placeholder="不想出现的东西（开启自动排除瑕疵时留空就行）"></textarea>
       </section>
 
-      <section class="card" id="refModeCard">
+      <section class="card nai-only" id="refModeCard">
         <div class="ref-mode-switch" id="refModeSwitch" role="tablist">
           <button type="button" class="ref-mode-btn active" data-mode="vibe" title="上传参考图学画风/色调/构图 (Vibe Transfer)">🎨 氛围转移</button>
           <button type="button" class="ref-mode-btn" data-mode="precise" title="官方 V4.5: 直接参考角色长相或画风 (Precise Reference)">🎯 精准参考 (V4.5)</button>
         </div>
       </section>
 
-      <section class="card collapsible open" data-collapsible id="vibeSection">
+      <section class="card collapsible open nai-only" data-collapsible id="vibeSection">
         <div class="card-title clickable" data-collapse-toggle>
           <span>氛围转移 (Vibe Transfer) <button class="hint-btn" title="这是什么？">?</button></span>
           <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
@@ -87,7 +92,7 @@
         </div>
       </section>
 
-      <section class="card collapsible open hidden" data-collapsible id="preciseSection">
+      <section class="card collapsible open hidden nai-only" data-collapsible id="preciseSection">
         <div class="card-title clickable" data-collapse-toggle>
           <span>精准参考 (Precise Reference) <button class="hint-btn" title="这是什么？">?</button></span>
           <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
@@ -106,7 +111,7 @@
         </div>
       </section>
 
-      <section class="card collapsible open" data-collapsible>
+      <section class="card collapsible open nai-only" data-collapsible>
         <div class="card-title clickable" data-collapse-toggle>
           <span>氛围转移 · 画风锁定 (PNG 元数据) <button class="hint-btn" title="这是什么？">?</button></span>
           <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
@@ -160,7 +165,7 @@
         </div>
       </section>
 
-      <section class="card collapsible open" data-collapsible>
+      <section class="card collapsible open nai-only" data-collapsible>
         <div class="card-title clickable" data-collapse-toggle>
           <span>多角色设定 (角色提示词) <button class="hint-btn" title="这是什么？">?</button></span>
           <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
@@ -185,6 +190,7 @@
           <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
         <div class="collapsible-body">
+          <div class="nai-only">
           <div class="field">
             <label>生成方式 <button class="hint-btn" title="这是什么？">?</button></label>
             <p class="hint-text hidden">凭空画：纯文字从零生成。照图改：上传原图让 AI 参考着改。局部重绘：在原图上涂抹一块区域，只重画那一块，其余保持原样。</p>
@@ -313,13 +319,48 @@
 
           <div class="field">
             <label>画面编号 (Seed) <button class="hint-btn" title="这是什么？">?</button></label>
-            <p class="hint-text hidden">相同编号 + 相同参数 = 完全相同的图。留空则每次随机；骰子按钮一键随机，想「换个构图再画一张」就用它。</p>
+            <p class="hint-text hidden">相同编号 + 相同参数 = 完全相同的图。留空则每次随机；骰子按钮一键随机，想「换个构图再画一张」就用它。开启「自动换编号」后，生成成功会自动换新编号，避免忘改时重复出同一张图。</p>
             <div class="seed-row">
               <input type="number" id="seedInput" placeholder="随机" min="0" max="4294967295">
               <button class="icon-btn" id="diceBtn" title="随机种子">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1" fill="currentColor"/><circle cx="15.5" cy="8.5" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="8.5" cy="15.5" r="1" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1" fill="currentColor"/></svg>
               </button>
             </div>
+            <label class="switch sm" style="margin-top:8px"><input type="checkbox" id="autoSeedToggle" checked><span class="slider"></span><span class="switch-label">生成后自动换编号 (防重复出图)</span></label>
+          </div>
+
+          </div>
+
+          <div class="gpt-only">
+            <div class="field">
+              <label>GPT 模型 <button class="hint-btn" title="这是什么？">?</button></label>
+              <p class="hint-text hidden">GPT-Image-1 是 OpenAI 官方图像模型；DALL·E 3 更适合艺术插画；自定义可填中转站支持的任意模型名（如 flux-1.1-pro、sd3、kolors），扩展参数会原样传给中转站。</p>
+              <select id="gptModelSelect">
+                <option value="gpt-image-1">GPT-Image-1 (OpenAI 官方)</option>
+                <option value="dall-e-3">DALL·E 3</option>
+                <option value="custom">自定义 (中转站模型)…</option>
+              </select>
+              <input type="text" id="gptModelCustom" class="hidden" placeholder="自定义模型名，如 flux-1.1-pro、sd3、kolors" style="margin-top:8px">
+            </div>
+            <div class="field">
+              <label>画面尺寸 <button class="hint-btn" title="这是什么？">?</button></label>
+              <p class="hint-text hidden">GPT-Image-1 支持方图 1024x1024、横图 1536x1024、竖图 1024x1536；DALL·E 3 会自动映射到最接近的官方尺寸；自定义模型按所选尺寸原样提交。</p>
+              <div class="seg" id="gptSizeSeg">
+                <button data-size="1024x1536">竖图</button>
+                <button data-size="1536x1024">横图</button>
+                <button data-size="1024x1024" class="active">方图</button>
+              </div>
+            </div>
+            <div class="field">
+              <label>画质 <button class="hint-btn" title="这是什么？">?</button></label>
+              <p class="hint-text hidden">GPT-Image-1: 高清 high / 标准 medium / 快速 low。DALL·E 3: 高清映射为 hd，快速映射为 standard。自定义模型忽略此项。</p>
+              <select id="gptQualitySelect">
+                <option value="high">高清 (high)</option>
+                <option value="medium">标准 (medium)</option>
+                <option value="low">快速 (low)</option>
+              </select>
+            </div>
+            <p class="field-hint">GPT 模式走 OpenAI 兼容接口 (/v1/images/generations)，提示词直接写自然语言即可。Seed / 步数 / 负向词 / 氛围转移是 NAI 专属能力，已自动隐藏；「一次画几张」仍然共用。</p>
           </div>
 
           <div class="field">
@@ -472,8 +513,8 @@
 
 <script src="js/zip.js?v=20261116a"></script>
 <script src="js/db.js?v=20261110g"></script>
-<script src="js/api.js?v=20261119d"></script>
+<script src="js/api.js?v=20261127a"></script>
 <script src="js/pngmeta.js?v=20261115c"></script>
-<script src="js/app.js?v=20261119m"></script>
+<script src="js/app.js?v=20261127a"></script>
 </body>
 </html>
