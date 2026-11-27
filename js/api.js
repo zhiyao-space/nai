@@ -289,6 +289,8 @@ function adaptOpenAiBody(body) {
   delete body.steps;
   delete body.guidance_scale;
   delete body.seed;
+  /* 官方接口无独立负向词参数: 有填写时并入提示词引导避开, 空则直接移除 */
+  if (body.negative_prompt) body.prompt = `${body.prompt}. Avoid: ${body.negative_prompt}`;
   delete body.negative_prompt;
   body.size = nearestOpenAiSize(body.size, OPENAI_OFFICIAL_SIZES[family]);
   if (family === "gpt-image") {
