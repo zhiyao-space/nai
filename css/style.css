@@ -17,6 +17,17 @@
   --warn: #f5b96e;
   --radius: 10px;
   --radius-sm: 7px;
+  --grad-a: #8266d9;
+  --grad-b: #6449b8;
+  --grad-logo-a: #b7a9ff;
+  --grad-logo-b: #8d7bf5;
+  --on-accent: #ffffff;
+  --overlay-bar: rgba(22, 20, 31, 0.85);
+  --overlay-strong: rgba(13, 12, 18, 0.72);
+  --canvas-center: #17141f;
+  --shadow-card: rgba(0, 0, 0, 0.35);
+  --shadow-card-deep: rgba(0, 0, 0, 0.45);
+  --card-frame: rgba(255, 255, 255, 0.08);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -60,7 +71,7 @@ body {
   font-size: 21px;
   font-weight: 800;
   letter-spacing: 0.5px;
-  background: linear-gradient(90deg, #b7a9ff, #8d7bf5);
+  background: linear-gradient(90deg, var(--grad-logo-a), var(--grad-logo-b));
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -116,9 +127,9 @@ body {
 .ghost-btn:hover { border-color: var(--accent); color: var(--accent); }
 
 .primary-btn {
-  background: linear-gradient(180deg, #8266d9, #6449b8);
+  background: linear-gradient(180deg, var(--grad-a), var(--grad-b));
   border: none;
-  color: #fff;
+  color: var(--on-accent);
   border-radius: var(--radius-sm);
   padding: 8px 18px;
   cursor: pointer;
@@ -401,9 +412,9 @@ input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border-radius
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: linear-gradient(180deg, #8266d9, #6449b8);
+  background: linear-gradient(180deg, var(--grad-a), var(--grad-b));
   border: none;
-  color: #fff;
+  color: var(--on-accent);
   font-size: 15px;
   font-weight: 700;
   padding: 12px;
@@ -427,15 +438,20 @@ input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border-radius
   align-items: center;
   justify-content: center;
   background:
-    radial-gradient(ellipse at 50% 40%, #17141f 0%, var(--bg) 75%);
+    radial-gradient(ellipse at 50% 40%, var(--canvas-center) 0%, var(--bg) 75%);
   min-width: 0;
 }
 
 #mainImage {
   max-width: calc(100% - 48px);
   max-height: calc(100% - 80px);
-  border-radius: 6px;
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
+  border-radius: 14px;
+  /* 精美高级卡片: 精细描边 + 双层柔和投影 + 内侧高光框 */
+  border: 1px solid var(--card-frame);
+  box-shadow:
+    0 0 0 1px var(--card-frame),
+    0 8px 24px var(--shadow-card),
+    0 28px 72px var(--shadow-card-deep);
   object-fit: contain;
 }
 
@@ -459,7 +475,7 @@ input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border-radius
   align-items: center;
   justify-content: space-between;
   padding: 0 14px;
-  background: rgba(22, 20, 31, 0.85);
+  background: var(--overlay-bar);
   backdrop-filter: blur(6px);
   border-top: 1px solid var(--border);
   font-size: 12px;
@@ -552,7 +568,7 @@ input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border-radius
 .history-item .hover-actions {
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(13, 12, 18, 0.72);
+  background: var(--overlay-strong);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1451,11 +1467,95 @@ body.view-history .panel-right { display: flex; }
   transition: background .15s, color .15s, border-color .15s;
 }
 .fmt-tab.active {
-  background: linear-gradient(135deg, #8b7aff, #6c5cd9);
-  color: #fff;
+  background: linear-gradient(135deg, var(--grad-a), var(--grad-b));
+  color: var(--on-accent);
   border-color: transparent;
 }
 .gpt-only { display: none; }
 body.mode-gpt .gpt-only { display: block; }
 body.mode-gpt .nai-only { display: none !important; }
 body.mode-gpt #promptInput { font-family: inherit; }
+
+/* ---------- 多主题预设 ---------- */
+/* 极简白 (白底黑字) */
+body[data-theme="minimal"] {
+  --bg:#f4f4f4; --bg-panel:#ffffff; --bg-card:#fafafa; --bg-elev:#ececec; --bg-input:#ffffff;
+  --border:#e2e2e2; --border-strong:#c9c9c9;
+  --text:#111111; --text-dim:#555555; --text-faint:#8f8f8f;
+  --accent:#141414; --accent-strong:#000000; --accent-soft:rgba(0,0,0,0.08);
+  --danger:#c0392b; --ok:#1e8e5a; --warn:#b8860b;
+  --grad-a:#3a3a3a; --grad-b:#111111; --grad-logo-a:#3a3a3a; --grad-logo-b:#000000;
+  --on-accent:#ffffff;
+  --overlay-bar:rgba(255,255,255,0.9); --overlay-strong:rgba(255,255,255,0.82);
+  --canvas-center:#ffffff;
+  --shadow-card:rgba(0,0,0,0.10); --shadow-card-deep:rgba(0,0,0,0.14);
+  --card-frame:rgba(0,0,0,0.10);
+}
+/* 曜石黑 (黑底白字) */
+body[data-theme="obsidian"] {
+  --bg:#050506; --bg-panel:#0b0b0d; --bg-card:#111113; --bg-elev:#17171a; --bg-input:#08080a;
+  --border:#222226; --border-strong:#333338;
+  --text:#f4f4f6; --text-dim:#9d9da8; --text-faint:#66666f;
+  --accent:#e9e9f2; --accent-strong:#cfcfdd; --accent-soft:rgba(255,255,255,0.10);
+  --grad-a:#3d3d46; --grad-b:#1c1c22; --grad-logo-a:#ffffff; --grad-logo-b:#a9a9b8;
+  --on-accent:#ffffff;
+  --overlay-bar:rgba(10,10,12,0.88); --overlay-strong:rgba(5,5,6,0.78);
+  --canvas-center:#0e0e11;
+  --shadow-card:rgba(0,0,0,0.5); --shadow-card-deep:rgba(0,0,0,0.6);
+  --card-frame:rgba(255,255,255,0.10);
+}
+/* 墨水纸 (复古米白) */
+body[data-theme="paper"] {
+  --bg:#f3ecdd; --bg-panel:#fffdf6; --bg-card:#faf5e9; --bg-elev:#efe6d2; --bg-input:#fffdf6;
+  --border:#e0d5bc; --border-strong:#c6b989;
+  --text:#2d2618; --text-dim:#7c715a; --text-faint:#a99d82;
+  --accent:#a8823f; --accent-strong:#8a6a30; --accent-soft:rgba(168,130,63,0.14);
+  --danger:#b5443f; --ok:#3f7d54; --warn:#a8742f;
+  --grad-a:#a8823f; --grad-b:#7c5c25; --grad-logo-a:#a8823f; --grad-logo-b:#6e5220;
+  --on-accent:#fffdf6;
+  --overlay-bar:rgba(255,253,246,0.9); --overlay-strong:rgba(243,236,221,0.85);
+  --canvas-center:#efe6d2;
+  --shadow-card:rgba(90,70,30,0.14); --shadow-card-deep:rgba(90,70,30,0.2);
+  --card-frame:rgba(140,110,50,0.22);
+}
+/* 雾蓝灰 (冷调浅色) */
+body[data-theme="mist"] {
+  --bg:#edf0f5; --bg-panel:#f8fafc; --bg-card:#ffffff; --bg-elev:#e4e9f0; --bg-input:#ffffff;
+  --border:#d4dbe4; --border-strong:#b6c1cf;
+  --text:#1f2733; --text-dim:#5d6878; --text-faint:#8b95a5;
+  --accent:#4a7db5; --accent-strong:#3a67a0; --accent-soft:rgba(74,125,181,0.14);
+  --danger:#c2504d; --ok:#3e8f66; --warn:#b3822f;
+  --grad-a:#5a88bd; --grad-b:#3a67a0; --grad-logo-a:#5a88bd; --grad-logo-b:#2f5688;
+  --on-accent:#ffffff;
+  --overlay-bar:rgba(248,250,252,0.9); --overlay-strong:rgba(237,240,245,0.85);
+  --canvas-center:#e4e9f0;
+  --shadow-card:rgba(40,60,90,0.12); --shadow-card-deep:rgba(40,60,90,0.18);
+  --card-frame:rgba(60,90,130,0.18);
+}
+
+/* 主题选择器 (设置弹窗) */
+.theme-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.theme-opt {
+  flex: 1 0 30%;
+  padding: 10px 6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.theme-opt.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+/* 顶栏主题快切按钮 */
+#themeQuickBtn { color: var(--text-dim); }
