@@ -51,7 +51,8 @@ const DEFAULT_SETTINGS = {
   gptSize: "1024x1536",
   gptQuality: "high",
   gptNegative: "",
-  theme: "night"
+  theme: "night",
+  paramLocked: false
 };
 
 const THEME_ORDER = ["night", "minimal", "obsidian", "paper", "mist"];
@@ -65,6 +66,14 @@ function applyTheme(theme) {
     b.classList.toggle("active", b.dataset.theme === theme);
   });
   try { localStorage.setItem("nai_theme", theme); } catch (e) {}
+}
+
+function applyParamLock(locked) {
+  settings.paramLocked = !!locked;
+  document.body.classList.toggle("params-locked", !!locked);
+  const btn = $("paramLockBtn");
+  if (btn) btn.textContent = locked ? "🔒 已锁定" : "🔓 解锁中";
+  try { localStorage.setItem("nai_param_locked", locked ? "1" : "0"); } catch (e) {}
 }
 
 function bindTheme() {
@@ -163,6 +172,7 @@ function loadState() {
     if (s) settings = { ...DEFAULT_SETTINGS, ...s };
     /* 主题立即生效, 避免首帧闪旧主题 */
     applyTheme(settings.theme || localStorage.getItem("nai_theme") || "night");
+    applyParamLock(settings.paramLocked === true || localStorage.getItem("nai_param_locked") === "1");
     const p = JSON.parse(localStorage.getItem(LS_PARAMS) || "null");
     if (p) {
       params = { ...DEFAULT_PARAMS, ...p };
@@ -2929,6 +2939,11 @@ function init() {
   bindModeTabs();
   bindGptPanel();
   bindTheme();
+  $("paramLockBtn").addEventListener("click", (e) => {
+    e.stopPropagation();
+    applyParamLock(!settings.paramLocked);
+    toast(settings.paramLocked ? "参数已锁定，滑块/尺寸/选项不会再误触" : "参数已解锁，可以随意调整", "ok");
+  });
   bindVibePresets();
   bindTranslateButtons();
   bindSizeControls();
