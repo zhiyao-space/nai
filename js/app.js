@@ -50,8 +50,38 @@ const DEFAULT_SETTINGS = {
   gptModel: "gpt-image-1",
   gptSize: "1024x1536",
   gptQuality: "high",
-  gptNegative: ""
+  gptNegative: "",
+  theme: "night"
 };
+
+const THEME_ORDER = ["night", "minimal", "obsidian", "paper", "mist"];
+const THEME_NAMES = { night: "暗夜紫", minimal: "极简白", obsidian: "曜石黑", paper: "墨水纸", mist: "雾蓝灰" };
+
+function applyTheme(theme) {
+  if (!THEME_ORDER.includes(theme)) theme = "night";
+  settings.theme = theme;
+  document.body.setAttribute("data-theme", theme);
+  document.querySelectorAll("#themeGrid .theme-opt").forEach((b) => {
+    b.classList.toggle("active", b.dataset.theme === theme);
+  });
+  try { localStorage.setItem("nai_theme", theme); } catch (e) {}
+}
+
+function bindTheme() {
+  document.querySelectorAll("#themeGrid .theme-opt").forEach((b) => {
+    b.addEventListener("click", () => {
+      applyTheme(b.dataset.theme);
+      saveSettings();
+      toast(`已切换到「${THEME_NAMES[settings.theme]}」主题`, "ok");
+    });
+  });
+  $("themeQuickBtn").addEventListener("click", () => {
+    const next = THEME_ORDER[(THEME_ORDER.indexOf(settings.theme) + 1) % THEME_ORDER.length];
+    applyTheme(next);
+    saveSettings();
+    toast(`已切换到「${THEME_NAMES[next]}」主题`, "ok");
+  });
+}
 
 let settings = { ...DEFAULT_SETTINGS };
 let params = { ...DEFAULT_PARAMS };
@@ -131,6 +161,8 @@ function loadState() {
   try {
     const s = JSON.parse(localStorage.getItem(LS_SETTINGS) || "null");
     if (s) settings = { ...DEFAULT_SETTINGS, ...s };
+    /* 主题立即生效, 避免首帧闪旧主题 */
+    applyTheme(settings.theme || localStorage.getItem("nai_theme") || "night");
     const p = JSON.parse(localStorage.getItem(LS_PARAMS) || "null");
     if (p) {
       params = { ...DEFAULT_PARAMS, ...p };
@@ -2896,6 +2928,7 @@ function init() {
   bindRefMode();
   bindModeTabs();
   bindGptPanel();
+  bindTheme();
   bindVibePresets();
   bindTranslateButtons();
   bindSizeControls();
