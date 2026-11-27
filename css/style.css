@@ -1559,3 +1559,18 @@ body[data-theme="mist"] {
 }
 /* 顶栏主题快切按钮 */
 #themeQuickBtn { color: var(--text-dim); }
+
+/* 参数锁定: 锁上后参数区不可点, 防手滑误改 */
+body.params-locked .lockable {
+  pointer-events: none;
+  opacity: 0.45;
+  filter: grayscale(0.5);
+}
+body.params-locked #paramLockBtn {
+  opacity: 1;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  pointer-events: auto;
+}
+#paramLockBtn { flex-shrink: 0; }
