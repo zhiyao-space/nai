@@ -22,6 +22,7 @@ const DEFAULT_PARAMS = {
   variety: 0,
   cfgRescale: 0,
   seed: "",
+  autoSeed: true,
   n: 1,
   qualityOn: true,
   ucpOn: true,
@@ -45,7 +46,10 @@ const DEFAULT_SETTINGS = {
   path: "",
   model: "nai-diffusion-4-5-curated",
   customModel: "",
-  translateModel: ""
+  translateModel: "",
+  gptModel: "gpt-image-1",
+  gptSize: "1024x1536",
+  gptQuality: "high"
 };
 
 let settings = { ...DEFAULT_SETTINGS };
@@ -520,6 +524,12 @@ function bindSliders() {
     params.seed = randomSeed();
     $("seedInput").value = params.seed;
     saveParams();
+  });
+  $("autoSeedToggle").checked = params.autoSeed !== false;
+  $("autoSeedToggle").addEventListener("change", () => {
+    params.autoSeed = $("autoSeedToggle").checked;
+    saveParams();
+    toast(params.autoSeed ? "已开启：每次生成成功后自动换新编号，防止重复出图" : "已关闭：编号将保持不变，方便固定 Seed 微调提示词", "ok");
   });
 }
 
@@ -2165,6 +2175,14 @@ function collectParams() {
       styleAware: r.styleAware
     }))
   };
+  /* GPT 模式: 模型/尺寸/画质由 GPT 面板接管, 数量共用 countSeg */
+  if (settings.format === "openai") {
+    const gm = gptEffectiveModel();
+    if (gm) p.model = gm;
+    const [gw, gh] = String(settings.gptSize || "1024x1024").split("x").map(Number);
+    if (gw && gh) { p.width = gw; p.height = gh; }
+    p.quality = settings.gptQuality || "high";
+  }
   return p;
 }
 
@@ -2302,8 +2320,8 @@ async function generate() {
       prependHistoryItem(rec);
       showImage(rec);
     }
-    /* 生成成功后自动滚动到新 Seed, 避免忘记改 Seed 时重复生成同一张图 */
-    if (!getActiveVibePreset()) {
+    /* 生成成功后自动滚动到新 Seed, 避免忘记改 Seed 时重复生成同一张图 (可开关) */
+    if (params.autoSeed !== false && !getActiveVibePreset()) {
       params.seed = randomSeed();
       $("seedInput").value = params.seed;
       saveParams();
@@ -2464,6 +2482,66 @@ function bindMetaImport() {
   });
 }
 
+/* ---------- 顶部模式 Tab (NAI / GPT) ---------- */
+
+function gptEffectiveModel() {
+  return settings.gptModel === "custom" ? (settings.gptModelCustom || "").trim() : settings.gptModel;
+}
+
+function updateModeTabs() {
+  const isGpt = settings.format === "openai" || settings.format === "kbq";
+  document.body.classList.toggle("mode-gpt", isGpt);
+  const tabs = $("fmtTabs");
+  if (tabs) {
+    for (const b of tabs.querySelectorAll("button")) {
+      const fmt = b.dataset.fmt;
+      const active = fmt === "gpt" ? isGpt : !isGpt;
+      b.classList.toggle("active", active);
+      b.title = fmt === "nai"
+        ? "NovelAI 官方接口 (/ai/generate-image)：氛围转移、精准参考、角色站位全部生效"
+        : "OpenAI 兼容格式 (/v1/images/generations)：GPT-Image / DALL·E / Flux 等通用绘画模型";
+    }
+  }
+}
+
+function bindModeTabs() {
+  const tabs = $("fmtTabs");
+  if (!tabs) return;
+  for (const b of tabs.querySelectorAll("button")) {
+    b.addEventListener("click", () => {
+      const target = b.dataset.fmt === "gpt" ? "openai" : "nai";
+      if (settings.format === target) return;
+      settings.format = target;
+      saveSettings();
+      updateModeTabs();
+      toast(target === "gpt" ? "已切换到 GPT 模式：走 OpenAI 兼容接口，参数面板已更换" : "已切换到 NAI 模式：官方参数面板已恢复", "ok");
+    });
+  }
+  updateModeTabs();
+}
+
+function bindGptPanel() {
+  $("gptModelSelect").value = ["gpt-image-1", "dall-e-3"].includes(settings.gptModel) ? settings.gptModel : "custom";
+  $("gptModelCustom").value = settings.gptModelCustom || "";
+  $("gptModelCustom").classList.toggle("hidden", $("gptModelSelect").value !== "custom");
+  $("gptModelSelect").addEventListener("change", () => {
+    settings.gptModel = $("gptModelSelect").value;
+    $("gptModelCustom").classList.toggle("hidden", settings.gptModel !== "custom");
+    saveSettings();
+  });
+  $("gptModelCustom").addEventListener("input", () => { settings.gptModelCustom = $("gptModelCustom").value.trim(); saveSettings(); });
+  for (const b of $("gptSizeSeg").querySelectorAll("button")) {
+    b.classList.toggle("active", b.dataset.size === settings.gptSize);
+    b.addEventListener("click", () => {
+      settings.gptSize = b.dataset.size;
+      for (const x of $("gptSizeSeg").querySelectorAll("button")) x.classList.toggle("active", x === b);
+      saveSettings();
+    });
+  }
+  $("gptQualitySelect").value = settings.gptQuality || "high";
+  $("gptQualitySelect").addEventListener("change", () => { settings.gptQuality = $("gptQualitySelect").value; saveSettings(); });
+}
+
 /* ---------- settings modal ---------- */
 
 function openSettings() {
@@ -2608,6 +2686,7 @@ function bindSettingsModal() {
     saveSettings();
     saveParams();
     updateModelSelectView();
+    updateModeTabs();
     updateNegativePlaceholder();
     updateVibeHints();
     closeSettings();
@@ -2811,6 +2890,8 @@ function init() {
   bindVibeTransfer();
   bindPrecise();
   bindRefMode();
+  bindModeTabs();
+  bindGptPanel();
   bindVibePresets();
   bindTranslateButtons();
   bindSizeControls();
