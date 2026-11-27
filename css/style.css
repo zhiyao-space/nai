@@ -1437,11 +1437,6 @@ body.view-history .panel-right { display: flex; }
   display: flex;
   gap: 8px;
   margin-bottom: 12px;
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  background: var(--bg-panel, #17131f);
-  padding: 8px 0;
 }
 .fmt-tab {
   flex: 1;
